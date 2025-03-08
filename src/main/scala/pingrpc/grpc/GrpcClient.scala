@@ -1,13 +1,13 @@
 package pingrpc.grpc
 
-import cats.effect.IO
+import cats.effect.{IO, Resource}
 import com.google.protobuf.{Message, Parser}
 import com.typesafe.scalalogging.StrictLogging
-import pingrpc.proto.ByteMarshaller
 import io.grpc.internal.DnsNameResolverProvider
 import io.grpc.netty.shaded.io.grpc.netty._
 import io.grpc.stub.ClientCalls
-import io.grpc.{CallOptions, ManagedChannel, MethodDescriptor}
+import io.grpc.{CallOptions, MethodDescriptor}
+import pingrpc.proto.ByteMarshaller
 
 import java.time.Duration
 
@@ -23,14 +23,18 @@ class GrpcClient extends StrictLogging {
 
     val callOptions = CallOptions.DEFAULT.withDeadlineAfter(Duration.ofSeconds(2))
 
-    IO.blocking {
-      val managedChannel: ManagedChannel = NettyChannelBuilder
+    val channelBuilder: NettyChannelBuilder =
+      NettyChannelBuilder
         .forTarget(target)
         .nameResolverFactory(new DnsNameResolverProvider)
         .usePlaintext
-        .build()
 
-      ClientCalls.blockingUnaryCall(managedChannel, methodDescriptor, callOptions, request.toByteArray)
+    Resource
+      .make(IO(channelBuilder.build))(channel => IO(channel.shutdown))
+      .use { channel =>
+        IO.blocking {
+          ClientCalls.blockingUnaryCall(channel, methodDescriptor, callOptions, request.toByteArray)
+        }
     }
   }
 
