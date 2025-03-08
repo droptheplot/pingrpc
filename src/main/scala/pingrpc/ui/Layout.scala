@@ -3,12 +3,12 @@ package pingrpc.ui
 import cats.effect.unsafe.implicits.global
 import com.google.protobuf.DescriptorProtos.{FileDescriptorProto, MethodDescriptorProto}
 import com.typesafe.scalalogging.StrictLogging
-import pingrpc.grpc.{FullMessageName, ReflectionManager, Sender}
+import pingrpc.grpc.{FullMessageName, CurlPrinter, ReflectionManager, Sender}
 import pingrpc.proto.{MethodDescriptorProtoConverter, ProtoUtils, ServiceResponseConverter}
 import io.grpc.StatusRuntimeException
 import io.grpc.reflection.v1.ServiceResponse
 import javafx.geometry.Insets
-import javafx.scene.control.{Button, ComboBox, TextArea, TextField}
+import javafx.scene.control.{Button, ComboBox, RadioButton, Tab, TabPane, TextArea, TextField, ToggleButton, ToggleGroup}
 import javafx.scene.layout._
 import javafx.scene.text.Font
 
@@ -29,11 +29,17 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
     .tap(_.setFont(monospacedFont))
   VBox.setVgrow(requestArea, Priority.ALWAYS)
 
-  private lazy val responseArea: TextArea = new TextArea()
+  private lazy val jsonArea: TextArea = new TextArea()
     .tap(_.setEditable(false))
     .tap(_.setWrapText(true))
     .tap(_.setFont(monospacedFont))
-  VBox.setVgrow(responseArea, Priority.ALWAYS)
+  VBox.setVgrow(jsonArea, Priority.ALWAYS)
+
+  private lazy val curlArea: TextArea = new TextArea()
+    .tap(_.setEditable(false))
+    .tap(_.setWrapText(true))
+    .tap(_.setFont(monospacedFont))
+  VBox.setVgrow(curlArea, Priority.ALWAYS)
 
   private val syncButton: Button = new Button("Sync")
 
@@ -83,7 +89,7 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
         servicesBox.getSelectionModel.select(0)
         servicesBox.setDisable(false)
       case Left(error) =>
-        responseArea.setText(error.toString)
+        jsonArea.setText(error.toString)
         methodsBox.setDisable(true)
         servicesBox.setDisable(true)
     }
@@ -93,16 +99,21 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
     val serviceResponse = servicesBox.getSelectionModel.getSelectedItem
     val methodDescriptorProto = methodsBox.getSelectionModel.getSelectedItem
 
+    val curlText = CurlPrinter.print(serviceResponse, methodDescriptorProto, urlField.getText, requestArea.getText)
+    curlArea.setText(curlText)
+
     sender.send(fileDescriptorProtos, serviceResponse, methodDescriptorProto, urlField.getText, requestArea.getText).attempt.unsafeRunSync match {
-      case Right(responseText) => responseArea.setText(responseText)
-      case Left(error: StatusRuntimeException) => responseArea.setText(error.getStatus.getCode.toString + "\n\n" + error.getStatus.getDescription)
-      case Left(error) => responseArea.setText(error.getMessage)
+      case Right(responseText) => jsonArea.setText(responseText)
+      case Left(error: StatusRuntimeException) => jsonArea.setText(error.getStatus.getCode.toString + "\n\n" + error.getStatus.getDescription)
+      case Left(error) => jsonArea.setText(error.getMessage)
     }
   }
 
   def build: Pane = {
     val leftColumn = new ColumnConstraints()
       .tap(_.setPercentWidth(50))
+
+    val responsePane = new ResponsePane(jsonArea, curlArea).build
 
     val rightColumn = new ColumnConstraints()
       .tap(_.setPercentWidth(50))
@@ -112,10 +123,10 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
       .tap(_.getColumnConstraints.add(rightColumn))
       .tap { pane =>
         leftPane.prefHeightProperty.bind(pane.heightProperty)
-        rightPane.prefHeightProperty.bind(pane.heightProperty)
+        responsePane.prefHeightProperty.bind(pane.heightProperty)
       }
       .tap(_.add(leftPane, 0, 0))
-      .tap(_.add(rightPane, 1, 0))
+      .tap(_.add(responsePane, 1, 0))
 
     new FlowPane()
       .tap(_.setHgap(10))
@@ -136,10 +147,6 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
     .tap(_.getChildren.add(servicesBox))
     .tap(_.getChildren.add(methodsBox))
     .tap(_.getChildren.add(requestArea))
-
-  private lazy val rightPane: Pane = new VBox()
-    .tap(_.setPadding(new Insets(10, 10, 10, 5)))
-    .tap(_.getChildren.add(responseArea))
 
   private lazy val submitPane: Pane = new HBox()
     .tap(_.setSpacing(10))
