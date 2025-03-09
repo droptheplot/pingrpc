@@ -3,14 +3,14 @@ package pingrpc.ui
 import cats.effect.unsafe.implicits.global
 import com.google.protobuf.DescriptorProtos.{FileDescriptorProto, MethodDescriptorProto}
 import com.typesafe.scalalogging.StrictLogging
-import pingrpc.grpc.{FullMessageName, CurlPrinter, ReflectionManager, Sender}
-import pingrpc.proto.{MethodDescriptorProtoConverter, ProtoUtils, ServiceResponseConverter}
 import io.grpc.StatusRuntimeException
 import io.grpc.reflection.v1.ServiceResponse
 import javafx.geometry.Insets
-import javafx.scene.control.{Button, ComboBox, RadioButton, Tab, TabPane, TextArea, TextField, ToggleButton, ToggleGroup}
+import javafx.scene.control.{Button, ComboBox, TextArea, TextField}
 import javafx.scene.layout._
 import javafx.scene.text.Font
+import pingrpc.grpc.{CurlPrinter, FullMessageName, ReflectionManager, Sender}
+import pingrpc.proto.{MethodDescriptorProtoConverter, ProtoUtils, ServiceResponseConverter}
 
 import scala.util.chaining.scalaUtilChainingOps
 
@@ -58,30 +58,39 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
     .tap(_.setPromptText("..."))
     .tap(_.setDisable(true))
 
+  private lazy val statusArea = new TextArea()
+    .tap(_.setEditable(false))
+    .tap(_.setWrapText(true))
+
   servicesBox.setOnAction { _ =>
-    val serviceResponse: ServiceResponse = servicesBox.getSelectionModel.getSelectedItem
+    Option(servicesBox.getSelectionModel.getSelectedItem).foreach { serviceResponse =>
+      logger.info(s"Select service=${serviceResponse.getName}")
 
-    logger.info(s"Select service=${serviceResponse.getName}")
+      fileDescriptorProtos = reflectionManager.getFileDescriptors(urlField.getText, serviceResponse.getName).unsafeRunSync
 
-    fileDescriptorProtos = reflectionManager.getFileDescriptors(urlField.getText, serviceResponse.getName).unsafeRunSync
-
-    ProtoUtils
-      .findServiceDescriptor(fileDescriptorProtos, FullMessageName.parse(serviceResponse.getName).get)
-      .foreach { serviceDescriptorProto =>
-        methodsBox.setDisable(false)
-        methodsBox.getItems.setAll(serviceDescriptorProto.getMethodList)
-        methodsBox.getSelectionModel.select(0)
-      }
+      ProtoUtils
+        .findServiceDescriptor(fileDescriptorProtos, FullMessageName.parse(serviceResponse.getName).get)
+        .foreach { serviceDescriptorProto =>
+          methodsBox.setDisable(false)
+          methodsBox.getItems.setAll(serviceDescriptorProto.getMethodList)
+          methodsBox.getSelectionModel.select(0)
+        }
+    }
   }
 
   methodsBox.setOnAction { _ =>
-    logger.info(s"Select method=${methodsBox.getSelectionModel.getSelectedItem.getName}")
-    submitButton.setDisable(false)
+    Option(methodsBox.getSelectionModel.getSelectedItem) match {
+      case Some(methodDescriptorProto) =>
+        logger.info(s"Select method=${methodDescriptorProto.getName}")
+        submitButton.setDisable(false)
+      case _ => ()
+    }
   }
 
   syncButton.setOnAction { _ =>
     servicesBox.getItems.clear()
     methodsBox.getItems.clear()
+    statusArea.clear()
 
     reflectionManager.getServices(urlField.getText).attempt.unsafeRunSync match {
       case Right(serviceResponses) =>
@@ -89,7 +98,7 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
         servicesBox.getSelectionModel.select(0)
         servicesBox.setDisable(false)
       case Left(error) =>
-        jsonArea.setText(error.toString)
+        statusArea.setText(error.toString)
         methodsBox.setDisable(true)
         servicesBox.setDisable(true)
     }
@@ -99,13 +108,34 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
     val serviceResponse = servicesBox.getSelectionModel.getSelectedItem
     val methodDescriptorProto = methodsBox.getSelectionModel.getSelectedItem
 
-    val curlText = CurlPrinter.print(serviceResponse, methodDescriptorProto, urlField.getText, requestArea.getText)
-    curlArea.setText(curlText)
-
-    sender.send(fileDescriptorProtos, serviceResponse, methodDescriptorProto, urlField.getText, requestArea.getText).attempt.unsafeRunSync match {
-      case Right(responseText) => jsonArea.setText(responseText)
-      case Left(error: StatusRuntimeException) => jsonArea.setText(error.getStatus.getCode.toString + "\n\n" + error.getStatus.getDescription)
-      case Left(error) => jsonArea.setText(error.getMessage)
+    (for {
+      requestMessageName <- FullMessageName
+        .parse(methodDescriptorProto.getInputType)
+        .toRight(new Throwable(s"Cannot get request name from `${methodDescriptorProto.getInputType}`"))
+      responseMessageName <- FullMessageName
+        .parse(methodDescriptorProto.getOutputType)
+        .toRight(new Throwable(s"Cannot get response name from `${methodDescriptorProto.getOutputType}`"))
+      fileDescriptors = ProtoUtils.toFileDescriptors(fileDescriptorProtos)
+      requestDescriptor <- ProtoUtils
+        .findMessageDescriptor(fileDescriptors, requestMessageName)
+        .toRight(new Throwable(s"Cannot find request descriptor for `$requestMessageName`"))
+      responseDescriptor <- ProtoUtils
+        .findMessageDescriptor(fileDescriptors, responseMessageName)
+        .toRight(new Throwable(s"Cannot find response descriptor for `$responseMessageName`"))
+      curlText = CurlPrinter.print(serviceResponse, methodDescriptorProto, urlField.getText, requestArea.getText)
+      _ = curlArea.setText(curlText)
+      method = ProtoUtils.buildMethodName(serviceResponse, methodDescriptorProto)
+      responseText <- sender.send(requestDescriptor, responseDescriptor, method, urlField.getText, requestArea.getText).attempt.unsafeRunSync
+    } yield (responseText, requestDescriptor)) match {
+      case Right(responseText -> requestDescriptor) =>
+        jsonArea.setText(responseText)
+        statusArea.setText(s"OK\n${requestDescriptor.getFullName}\n${requestDescriptor.getFile.getFullName}")
+      case Left(error: StatusRuntimeException) =>
+        jsonArea.clear()
+        statusArea.setText(error.getMessage)
+      case Left(error) =>
+        jsonArea.clear()
+        statusArea.setText(error.getMessage)
     }
   }
 
@@ -113,7 +143,7 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
     val leftColumn = new ColumnConstraints()
       .tap(_.setPercentWidth(50))
 
-    val responsePane = new ResponsePane(jsonArea, curlArea).build
+    val responsePane = new ResponsePane(jsonArea, curlArea, statusArea).build
 
     val rightColumn = new ColumnConstraints()
       .tap(_.setPercentWidth(50))

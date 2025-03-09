@@ -6,7 +6,7 @@ import javafx.scene.layout.{HBox, Pane, Priority, VBox}
 
 import scala.util.chaining.scalaUtilChainingOps
 
-class ResponsePane(jsonArea: TextArea, curlArea: TextArea) {
+class ResponsePane(jsonArea: TextArea, curlArea: TextArea, statusArea: TextArea) {
   private val toggleGroup = new ToggleGroup()
 
   private val jsonButton = new ToggleButton("JSON")
@@ -24,7 +24,6 @@ class ResponsePane(jsonArea: TextArea, curlArea: TextArea) {
 
   private val menuBox = new HBox()
     .tap(_.setSpacing(10))
-    .tap(_.setPadding(new Insets(0, 0, 10, 0)))
     .tap(_.getChildren.add(jsonButton))
     .tap(_.getChildren.add(grpcurlButton))
 
@@ -33,7 +32,9 @@ class ResponsePane(jsonArea: TextArea, curlArea: TextArea) {
   VBox.setVgrow(contentBox, Priority.ALWAYS)
 
   def build: Pane = new VBox()
+    .tap(_.setSpacing(10))
     .tap(_.setPadding(new Insets(10, 10, 10, 5)))
     .tap(_.getChildren.add(menuBox))
     .tap(_.getChildren.add(contentBox))
+    .tap(_.getChildren.add(statusArea))
 }
