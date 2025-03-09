@@ -12,10 +12,11 @@ import javafx.scene.text.Font
 import pingrpc.grpc.{CurlPrinter, FullMessageName, ReflectionManager, Sender}
 import pingrpc.proto.{MethodDescriptorProtoConverter, ProtoUtils, ServiceResponseConverter}
 
+import scala.collection.mutable
 import scala.util.chaining.scalaUtilChainingOps
 
 class Layout(reflectionManager: ReflectionManager, sender: Sender) extends StrictLogging {
-  private var fileDescriptorProtos = List.empty[FileDescriptorProto]
+  private val fileDescriptorProtos = mutable.ListBuffer.empty[FileDescriptorProto]
 
   private val monospacedFont = Font.font("monospaced")
 
@@ -66,10 +67,11 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
     Option(servicesBox.getSelectionModel.getSelectedItem).foreach { serviceResponse =>
       logger.info(s"Select service=${serviceResponse.getName}")
 
-      fileDescriptorProtos = reflectionManager.getFileDescriptors(urlField.getText, serviceResponse.getName).unsafeRunSync
+      fileDescriptorProtos.clear()
+      fileDescriptorProtos.addAll(reflectionManager.getFileDescriptors(urlField.getText, serviceResponse.getName).unsafeRunSync)
 
       ProtoUtils
-        .findServiceDescriptor(fileDescriptorProtos, FullMessageName.parse(serviceResponse.getName).get)
+        .findServiceDescriptor(fileDescriptorProtos.toList, FullMessageName.parse(serviceResponse.getName).get)
         .foreach { serviceDescriptorProto =>
           methodsBox.setDisable(false)
           methodsBox.getItems.setAll(serviceDescriptorProto.getMethodList)
@@ -115,7 +117,7 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
       responseMessageName <- FullMessageName
         .parse(methodDescriptorProto.getOutputType)
         .toRight(new Throwable(s"Cannot get response name from `${methodDescriptorProto.getOutputType}`"))
-      fileDescriptors = ProtoUtils.toFileDescriptors(fileDescriptorProtos)
+      fileDescriptors = ProtoUtils.toFileDescriptors(fileDescriptorProtos.toList)
       requestDescriptor <- ProtoUtils
         .findMessageDescriptor(fileDescriptors, requestMessageName)
         .toRight(new Throwable(s"Cannot find request descriptor for `$requestMessageName`"))
