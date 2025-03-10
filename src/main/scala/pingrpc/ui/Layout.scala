@@ -60,6 +60,7 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
     .tap(_.setDisable(true))
 
   private lazy val statusArea = new TextArea()
+    .tap(_.setPrefHeight(100))
     .tap(_.setEditable(false))
     .tap(_.setWrapText(true))
 
@@ -134,7 +135,7 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
         statusArea.setText(s"OK\n${requestDescriptor.getFullName}\n${requestDescriptor.getFile.getFullName}")
       case Left(error: StatusRuntimeException) =>
         jsonArea.clear()
-        statusArea.setText(error.getMessage)
+        statusArea.setText(s"${error.getStatus.getCode}\n${error.getStatus.getDescription}")
       case Left(error) =>
         jsonArea.clear()
         statusArea.setText(error.getMessage)
