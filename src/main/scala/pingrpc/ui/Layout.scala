@@ -5,10 +5,8 @@ import com.google.protobuf.DescriptorProtos.{FileDescriptorProto, MethodDescript
 import com.typesafe.scalalogging.StrictLogging
 import io.grpc.StatusRuntimeException
 import io.grpc.reflection.v1.ServiceResponse
-import javafx.geometry.Insets
-import javafx.scene.control.{Button, ComboBox, TextArea, TextField}
+import javafx.scene.control.{Button, ComboBox, Label, TextArea, TextField}
 import javafx.scene.layout._
-import javafx.scene.text.Font
 import pingrpc.grpc.{CurlPrinter, FullMessageName, ReflectionManager, Sender}
 import pingrpc.proto.{MethodDescriptorProtoConverter, ProtoUtils, ServiceResponseConverter}
 
@@ -17,8 +15,6 @@ import scala.util.chaining.scalaUtilChainingOps
 
 class Layout(reflectionManager: ReflectionManager, sender: Sender) extends StrictLogging {
   private val fileDescriptorProtos = mutable.ListBuffer.empty[FileDescriptorProto]
-
-  private val monospacedFont = Font.font("monospaced")
 
   private val urlField: TextField = new TextField()
     .tap(_.setText("localhost:8080"))
@@ -40,12 +36,15 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
     .tap(_.setEditable(false))
     .tap(_.setWrapText(true))
     .tap(_.setFont(monospacedFont))
-  VBox.setVgrow(curlArea, Priority.ALWAYS)
+    .tap(_.setPrefHeight(80))
 
   private val syncButton: Button = new Button("Sync")
 
-  private val submitButton: Button = new Button("Send")
-    .tap(_.setDisable(true))
+  private val submitButton: Button = new Button("Send").tap(_.setDisable(true))
+
+  private val requestMessageLabel = new Label("...").tap(_.setTextFill(grayColor))
+
+  private val responseMessageLabel = new Label("...").tap(_.setTextFill(grayColor))
 
   private lazy val servicesBox: ComboBox[ServiceResponse] = new ComboBox[ServiceResponse]()
     .tap(_.setConverter(new ServiceResponseConverter))
@@ -60,7 +59,8 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
     .tap(_.setDisable(true))
 
   private lazy val statusArea = new TextArea()
-    .tap(_.setPrefHeight(100))
+    .tap(_.setFont(monospacedFont))
+    .tap(_.setPrefHeight(80))
     .tap(_.setEditable(false))
     .tap(_.setWrapText(true))
 
@@ -85,6 +85,12 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
     Option(methodsBox.getSelectionModel.getSelectedItem) match {
       case Some(methodDescriptorProto) =>
         logger.info(s"Select method=${methodDescriptorProto.getName}")
+        FullMessageName.parse(methodDescriptorProto.getInputType).foreach { fullMessageName =>
+          requestMessageLabel.setText(fullMessageName.toString)
+        }
+        FullMessageName.parse(methodDescriptorProto.getOutputType).foreach { fullMessageName =>
+          responseMessageLabel.setText(fullMessageName.toString)
+        }
         submitButton.setDisable(false)
       case _ => ()
     }
@@ -129,10 +135,10 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
       _ = curlArea.setText(curlText)
       method = ProtoUtils.buildMethodName(serviceResponse, methodDescriptorProto)
       responseText <- sender.send(requestDescriptor, responseDescriptor, method, urlField.getText, requestArea.getText).attempt.unsafeRunSync
-    } yield (responseText, requestDescriptor)) match {
-      case Right(responseText -> requestDescriptor) =>
+    } yield (responseText, requestDescriptor, responseDescriptor)) match {
+      case Right((responseText, requestDescriptor, responseDescriptor)) =>
         jsonArea.setText(responseText)
-        statusArea.setText(s"OK\n${requestDescriptor.getFullName}\n${requestDescriptor.getFile.getFullName}")
+        statusArea.setText(List("OK", requestDescriptor.getFullName, responseDescriptor.getFullName).mkString("\n"))
       case Left(error: StatusRuntimeException) =>
         jsonArea.clear()
         statusArea.setText(s"${error.getStatus.getCode}\n${error.getStatus.getDescription}")
@@ -143,22 +149,20 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
   }
 
   def build: Pane = {
-    val leftColumn = new ColumnConstraints()
-      .tap(_.setPercentWidth(50))
+    val requestPane = new RequestPane(urlField, requestArea, curlArea, syncButton, submitButton, servicesBox, methodsBox, requestMessageLabel).build
+    val responsePane = new ResponsePane(jsonArea, statusArea, responseMessageLabel).build
 
-    val responsePane = new ResponsePane(jsonArea, curlArea, statusArea).build
-
-    val rightColumn = new ColumnConstraints()
-      .tap(_.setPercentWidth(50))
+    val requestColumn = new ColumnConstraints().tap(_.setPercentWidth(50))
+    val responseColumn = new ColumnConstraints().tap(_.setPercentWidth(50))
 
     val gridPane = new GridPane()
-      .tap(_.getColumnConstraints.add(leftColumn))
-      .tap(_.getColumnConstraints.add(rightColumn))
+      .tap(_.getColumnConstraints.add(requestColumn))
+      .tap(_.getColumnConstraints.add(responseColumn))
       .tap { pane =>
-        leftPane.prefHeightProperty.bind(pane.heightProperty)
+        requestPane.prefHeightProperty.bind(pane.heightProperty)
         responsePane.prefHeightProperty.bind(pane.heightProperty)
       }
-      .tap(_.add(leftPane, 0, 0))
+      .tap(_.add(requestPane, 0, 0))
       .tap(_.add(responsePane, 1, 0))
 
     new FlowPane()
@@ -172,18 +176,4 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
         gridPane.prefHeightProperty.bind(root.heightProperty)
       }
   }
-
-  private lazy val leftPane: Pane = new VBox()
-    .tap(_.setSpacing(10))
-    .tap(_.setPadding(new Insets(10, 5, 10, 10)))
-    .tap(_.getChildren.add(submitPane))
-    .tap(_.getChildren.add(servicesBox))
-    .tap(_.getChildren.add(methodsBox))
-    .tap(_.getChildren.add(requestArea))
-
-  private lazy val submitPane: Pane = new HBox()
-    .tap(_.setSpacing(10))
-    .tap(_.getChildren.add(urlField))
-    .tap(_.getChildren.add(syncButton))
-    .tap(_.getChildren.add(submitButton))
 }

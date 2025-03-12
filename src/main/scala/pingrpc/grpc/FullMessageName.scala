@@ -1,6 +1,8 @@
 package pingrpc.grpc
 
-case class FullMessageName(packageName: String, messageName: String)
+case class FullMessageName(packageName: String, messageName: String) {
+  override def toString: String = s"$packageName.$messageName"
+}
 
 object FullMessageName {
   def parse(value: String): Option[FullMessageName] = {

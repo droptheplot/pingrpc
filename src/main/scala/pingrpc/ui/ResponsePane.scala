@@ -1,31 +1,19 @@
 package pingrpc.ui
 
 import javafx.geometry.Insets
-import javafx.scene.control.{TextArea, ToggleButton, ToggleGroup}
-import javafx.scene.layout.{HBox, Pane, Priority, VBox}
+import javafx.scene.control.{Label, TextArea}
+import javafx.scene.layout.{Pane, Priority, VBox}
 
 import scala.util.chaining.scalaUtilChainingOps
 
-class ResponsePane(jsonArea: TextArea, curlArea: TextArea, statusArea: TextArea) {
-  private val toggleGroup = new ToggleGroup()
+class ResponsePane(jsonArea: TextArea, statusArea: TextArea, responseMessageLabel: Label) {
+  private val responseLabel = new Label("RESPONSE")
+    .tap(_.setFont(titleFont))
+    .tap(_.setTextFill(grayColor))
 
-  private val jsonButton = new ToggleButton("JSON")
-    .tap(_.setToggleGroup(toggleGroup))
-    .tap(_.setSelected(true))
-    .tap(_.setOnAction { _ =>
-      contentBox.getChildren.setAll(jsonArea)
-    })
-
-  private val grpcurlButton = new ToggleButton("gRPCurl")
-    .tap(_.setToggleGroup(toggleGroup))
-    .tap(_.setOnAction { _ =>
-      contentBox.getChildren.setAll(curlArea)
-    })
-
-  private val menuBox = new HBox()
-    .tap(_.setSpacing(10))
-    .tap(_.getChildren.add(jsonButton))
-    .tap(_.getChildren.add(grpcurlButton))
+  private val statusLabel = new Label("STATUS")
+    .tap(_.setFont(titleFont))
+    .tap(_.setTextFill(grayColor))
 
   private val contentBox = new VBox()
     .tap(_.getChildren.add(jsonArea))
@@ -34,7 +22,9 @@ class ResponsePane(jsonArea: TextArea, curlArea: TextArea, statusArea: TextArea)
   def build: Pane = new VBox()
     .tap(_.setSpacing(10))
     .tap(_.setPadding(new Insets(10, 10, 10, 5)))
-    .tap(_.getChildren.add(menuBox))
+    .tap(_.getChildren.add(responseLabel))
+    .tap(_.getChildren.add(responseMessageLabel))
     .tap(_.getChildren.add(contentBox))
+    .tap(_.getChildren.add(statusLabel))
     .tap(_.getChildren.add(statusArea))
 }
