@@ -4,7 +4,10 @@ import pingrpc.grpc.{GrpcClient, ReflectionManager, Sender}
 import pingrpc.ui.Layout
 import javafx.application.Application
 import javafx.scene.Scene
+import javafx.scene.image.Image
 import javafx.stage.Stage
+
+import scala.util.Try
 
 class AppFx extends Application {
   override def start(primaryStage: Stage): Unit = {
@@ -15,6 +18,11 @@ class AppFx extends Application {
 
     primaryStage.setTitle("PingRPC")
     primaryStage.setScene(new Scene(layout.build, 1200, 800))
+
+    Try(getClass.getResourceAsStream("/icon.png"))
+      .map(new Image(_))
+      .foreach(primaryStage.getIcons.add(_))
+
     primaryStage.show()
   }
 }
