@@ -1,11 +1,12 @@
 package pingrpc
 
-import pingrpc.grpc.{GrpcClient, ReflectionManager, Sender}
-import pingrpc.ui.Layout
 import javafx.application.Application
 import javafx.scene.Scene
 import javafx.scene.image.Image
 import javafx.stage.Stage
+import pingrpc.grpc.{GrpcClient, ReflectionManager, Sender}
+import pingrpc.hello.HelloServer
+import pingrpc.ui.Layout
 
 import scala.util.Try
 
@@ -28,5 +29,7 @@ class AppFx extends Application {
 }
 
 object Main extends App {
+  HelloServer.start
+
   Application.launch(classOf[AppFx], args: _*)
 }
