@@ -1,5 +1,6 @@
 package pingrpc
 
+import atlantafx.base.theme.PrimerLight
 import javafx.application.Application
 import javafx.scene.Scene
 import javafx.scene.image.Image
@@ -23,6 +24,8 @@ class AppFx extends Application {
     Try(getClass.getResourceAsStream("/icon.png"))
       .map(new Image(_))
       .foreach(primaryStage.getIcons.add(_))
+
+    Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet)
 
     primaryStage.show()
   }

@@ -10,6 +10,8 @@ libraryDependencies += "org.typelevel" %% "cats-effect" % "3.5.7"
 libraryDependencies += "org.openjfx" % "javafx" % "23.0.2"
 libraryDependencies += "org.openjfx" % "javafx-controls" % "23.0.2"
 
+libraryDependencies += "io.github.mkpaz" % "atlantafx-base" % "2.0.1"
+
 libraryDependencies += "io.grpc" % "grpc-core" % "1.71.0"
 libraryDependencies += "io.grpc" % "grpc-netty-shaded" % "1.71.0"
 libraryDependencies += "io.grpc" % "grpc-protobuf" % "1.71.0"
