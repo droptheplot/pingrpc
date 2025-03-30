@@ -51,7 +51,7 @@ object ProtoUtils {
   def messageToJson(bytes: Array[Byte], descriptor: Descriptor): IO[String] =
     for {
       responseMessage <- IO(DynamicMessage.parseFrom(descriptor, bytes))
-      responseText = JsonFormat.printer.print(responseMessage)
+      responseText = JsonFormat.printer.preservingProtoFieldNames.print(responseMessage)
     } yield responseText
 
   def buildMethodName(serviceResponse: ServiceResponse, methodDescriptorProto: MethodDescriptorProto) =
