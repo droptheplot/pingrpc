@@ -30,6 +30,10 @@ libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
 libraryDependencies += "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
 libraryDependencies += "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf"
 
+libraryDependencies += "io.circe" %% "circe-core" % "0.14.12"
+libraryDependencies += "io.circe" %% "circe-generic" % "0.14.12"
+libraryDependencies += "io.circe" %% "circe-parser" % "0.14.12"
+
 enablePlugins(JavaAppPackaging)
 enablePlugins(LauncherJarPlugin)
 

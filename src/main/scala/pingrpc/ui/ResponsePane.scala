@@ -6,13 +6,13 @@ import javafx.scene.layout.{Pane, Priority, VBox}
 
 import scala.util.chaining.scalaUtilChainingOps
 
-class ResponsePane(jsonArea: TextArea, statusArea: TextArea, responseMessageLabel: Label) {
+class ResponsePane(jsonArea: TextArea, curlArea: TextArea, responseMessageLabel: Label) {
   private val responseLabel = new Label("RESPONSE")
-    .tap(_.setFont(titleFont))
+    .tap(_.setFont(boldFont))
     .tap(_.setTextFill(grayColor))
 
-  private val statusLabel = new Label("STATUS")
-    .tap(_.setFont(titleFont))
+  private val statusLabel = new Label("GRPCURL")
+    .tap(_.setFont(boldFont))
     .tap(_.setTextFill(grayColor))
 
   private val contentBox = new VBox()
@@ -26,5 +26,5 @@ class ResponsePane(jsonArea: TextArea, statusArea: TextArea, responseMessageLabe
     .tap(_.getChildren.add(responseMessageLabel))
     .tap(_.getChildren.add(contentBox))
     .tap(_.getChildren.add(statusLabel))
-    .tap(_.getChildren.add(statusArea))
+    .tap(_.getChildren.add(curlArea))
 }

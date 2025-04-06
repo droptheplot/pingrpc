@@ -2,29 +2,36 @@ syntax = "proto3";
 
 package protobuf;
 
-message Simple {
-  int64 int64 = 1;
-  double double = 2;
-  string string = 3;
-  Enum enum = 4;
-  Nested nested = 5;
-  repeated Nested repeated_nested = 6;
-  repeated string repeated_string = 7;
+message User {
+  int64 id = 1;
+  string email = 2;
+  bool email_confirmed = 3;
+  Status status = 4;
+  Image avatar = 5;
+  double rating = 6;
+  repeated Image photos = 7;
+  repeated string phones = 8;
 
-  enum Enum {
-    UNKNOWN = 0;
-    FIRST = 1;
-    SECOND = 2;
+  enum Status {
+    UNKNOWN_STATUS = 0;
+    ACTIVE = 1;
+    DELETED = 2;
   }
 
-  message Nested {
-    int32 int32 = 1;
-    double double = 2;
-    string string = 3;
+  message Image {
+    int32 id = 1;
+    string url = 2;
   }
 }
 
-service Hello {
-  rpc CallSimple(Simple) returns (Simple) {}
+service HelloService {
+  rpc Create(CreateUserRequest) returns (CreateUserResponse) {}
 }
 
+message CreateUserRequest {
+  User user = 1;
+}
+
+message CreateUserResponse {
+  User user = 1;
+}
