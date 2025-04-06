@@ -40,7 +40,9 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
 
   private val syncButton: Button = new Button("Sync")
 
-  private val submitButton: Button = new Button("Send").tap(_.setDisable(true))
+  private val submitButton: Button = new Button("Send")
+    .tap(_.setDisable(true))
+    .tap(_.getStyleClass.add("accent"))
 
   private val requestMessageLabel = new Label("...").tap(_.setTextFill(grayColor))
 
