@@ -121,7 +121,13 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
 
     reflectionManager.getServices(urlField.getText).attempt.unsafeRunSync match {
       case Right(serviceResponses) =>
-        serviceResponses.foreach(servicesBox.getItems.add)
+        serviceResponses
+          .sorted[ServiceResponse] {
+            case (a, _) if a.getName == "grpc.reflection.v1alpha.ServerReflection" => 1
+            case (_, b) if b.getName == "grpc.reflection.v1alpha.ServerReflection" => -1
+            case (a, b) => a.getName.compareTo(b.getName)
+          }
+          .foreach(servicesBox.getItems.add)
         servicesBox.getSelectionModel.select(0)
         servicesBox.setDisable(false)
       case Left(_) =>
