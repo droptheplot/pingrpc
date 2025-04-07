@@ -6,9 +6,10 @@ import javafx.scene.Scene
 import javafx.scene.image.Image
 import javafx.stage.Stage
 import pingrpc.grpc.{GrpcClient, ReflectionManager, Sender}
-import pingrpc.hello.HelloServer
+import pingrpc.server.HelloServer
 import pingrpc.ui.Layout
 
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 class AppFx extends Application {
@@ -32,7 +33,9 @@ class AppFx extends Application {
 }
 
 object Main extends App {
-  HelloServer.start
+  args.find(_ == "--server").foreach { _ =>
+    HelloServer.start()(ExecutionContext.global)
+  }
 
   Application.launch(classOf[AppFx], args: _*)
 }
