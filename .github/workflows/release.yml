@@ -1,0 +1,27 @@
+name: Release
+on: [workflow_dispatch]
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: 'sbt'
+      - uses: sbt/setup-sbt@v1
+      - run: sbt assembly
+      - run: echo "VERSION=$(sbt -batch -error 'print version' | head -n 1)" >> $GITHUB_ENV
+      - run: |
+         jpackage --type app-image \
+           --input target/scala-2.13 \
+           --main-jar pingrpc-assembly-${{ env.VERSION }}.jar \
+           --type dmg \
+           --icon src/main/resources/icon.icns \
+           --app-version ${{ env.VERSION }} \
+           --name pingrpc
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: pingrpc.dmg
+          path: pingrpc-${{ env.VERSION }}.dmg
