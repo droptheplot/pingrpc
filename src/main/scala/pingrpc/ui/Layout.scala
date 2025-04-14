@@ -167,10 +167,10 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
     } yield responseText) match {
       case Right(responseText) =>
         jsonArea.setText(responseText)
-      case Left(_: StatusRuntimeException) =>
-        jsonArea.clear()
-      case Left(_) =>
-        jsonArea.clear()
+      case Left(e: StatusRuntimeException) =>
+        jsonArea.setText(e.toString)
+      case Left(e) =>
+        jsonArea.setText(e.toString)
     }
   }
 
