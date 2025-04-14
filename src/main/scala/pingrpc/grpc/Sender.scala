@@ -17,7 +17,7 @@ class Sender(grpcClient: GrpcClient) extends StrictLogging {
     requestMessage <- ProtoUtils
       .messageFromJson(json, requestDescriptor)
       .adaptError(_ => new Throwable("Invalid request json"))
-    responseBytes <- grpcClient.send(target, method, requestMessage)
+    responseBytes <- grpcClient.send(target, method, requestMessage, Map.empty)
     responseText <- ProtoUtils
       .messageToJson(responseBytes, responseDescriptor)
       .adaptError(_ => new Throwable("Invalid response json"))

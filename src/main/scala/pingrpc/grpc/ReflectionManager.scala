@@ -19,7 +19,7 @@ class ReflectionManager(grpcClient: GrpcClient) {
       .build()
 
     grpcClient
-      .sendAndParse[ServerReflectionResponse](target, reflectionServerName, request)
+      .sendAndParse[ServerReflectionResponse](target, reflectionServerName, request, Map.empty)
       .map(_.getListServicesResponse.getServiceList.asScala.toList)
   }
 
@@ -30,7 +30,7 @@ class ReflectionManager(grpcClient: GrpcClient) {
       .build()
 
     grpcClient
-      .sendAndParse[ServerReflectionResponse](target, reflectionServerName, request)
+      .sendAndParse[ServerReflectionResponse](target, reflectionServerName, request, Map.empty)
       .map(_.getFileDescriptorResponse.getFileDescriptorProtoList.asScala.toList.map(FileDescriptorProto.parseFrom))
   }
 }
