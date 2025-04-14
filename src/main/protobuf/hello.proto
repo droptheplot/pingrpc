@@ -26,6 +26,8 @@ message User {
 
 service HelloService {
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
 }
 
 message CreateUserRequest {
@@ -33,5 +35,13 @@ message CreateUserRequest {
 }
 
 message CreateUserResponse {
+  User user = 1;
+}
+
+message UpdateUserRequest {
+  User user = 1;
+}
+
+message UpdateUserResponse {
   User user = 1;
 }

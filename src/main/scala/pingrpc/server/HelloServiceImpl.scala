@@ -10,4 +10,9 @@ class HelloServiceImpl()(implicit ec: ExecutionContext) extends HelloServiceGrpc
     logger.info(request.toProtoString)
     Future.successful(CreateUserResponse.defaultInstance.withUser(request.getUser))
   }
+
+  override def updateUser(request: UpdateUserRequest): Future[UpdateUserResponse] = {
+    logger.info(request.toProtoString)
+    Future.failed(new Throwable("Something went wrong"))
+  }
 }
