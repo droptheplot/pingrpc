@@ -17,7 +17,7 @@ import scala.util.chaining.scalaUtilChainingOps
 class GrpcClient extends StrictLogging {
   private val marshaller = new ByteMarshaller
 
-  def send(request: Request): IO[Response[Array[Byte]]] = {
+  def send[T <: Message](request: Request)(implicit parser: Parser[T]): IO[Response[T]] = {
     val methodDescriptor = MethodDescriptor
       .newBuilder(marshaller, marshaller)
       .setFullMethodName(request.method)
@@ -45,7 +45,8 @@ class GrpcClient extends StrictLogging {
         _ <- processCall(call, listener, request.message.toByteArray, toMetadata(request.headers))
         response <- IO.fromFuture(IO(responsePromise.future))
         metadata <- IO.fromFuture(IO(headersPromise.future))
-      } yield Response(response, fromMetadata(metadata))
+        message <- IO(parser.parseFrom(response))
+      } yield Response(message, fromMetadata(metadata))
     }
   }
 
@@ -60,12 +61,6 @@ class GrpcClient extends StrictLogging {
     metadata.keys.asScala.map { key =>
       (key, metadata.get(Metadata.Key.of(key, Metadata.ASCII_STRING_MARSHALLER)))
     }.toMap
-
-  def sendAndParse[T <: Message](request: Request)(implicit parser: Parser[T]): IO[Response[T]] =
-    for {
-      response <- send(request)
-      message <- IO(parser.parseFrom(response.message))
-    } yield response.copy(message = message)
 
   private def processCall[T](call: ClientCall[T, T], listener: Listener[T], request: T, metadata: Metadata): IO[Unit] =
     IO.blocking {

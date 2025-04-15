@@ -48,12 +48,6 @@ object ProtoUtils {
     IO(JsonFormat.parser.ignoringUnknownFields.merge(requestText, builder)).map(_ => builder.build)
   }
 
-  def messageToJson(bytes: Array[Byte], descriptor: Descriptor): IO[String] =
-    for {
-      responseMessage <- IO(DynamicMessage.parseFrom(descriptor, bytes))
-      responseText = JsonFormat.printer.preservingProtoFieldNames.print(responseMessage)
-    } yield responseText
-
   def buildMethodName(serviceResponse: ServiceResponse, methodDescriptorProto: MethodDescriptorProto) =
     s"${serviceResponse.getName}/${methodDescriptorProto.getName}"
 }
