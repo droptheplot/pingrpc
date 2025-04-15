@@ -14,12 +14,13 @@ class Sender(grpcClient: GrpcClient) extends StrictLogging {
       target: String,
       json: String
   ): IO[String] = for {
-    requestMessage <- ProtoUtils
+    message <- ProtoUtils
       .messageFromJson(json, requestDescriptor)
       .adaptError(_ => new Throwable("Invalid request json"))
-    responseBytes <- grpcClient.send(target, method, requestMessage, Map.empty)
-    responseText <- ProtoUtils
-      .messageToJson(responseBytes, responseDescriptor)
+    request = Request(target, method, message, Map.empty)
+    response <- grpcClient.send(request)
+    json <- ProtoUtils
+      .messageToJson(response.message, responseDescriptor)
       .adaptError(_ => new Throwable("Invalid response json"))
-  } yield responseText
+  } yield json
 }

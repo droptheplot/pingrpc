@@ -11,30 +11,29 @@ import pingrpc.proto.ByteMarshaller
 
 import java.util.concurrent.{Executors, TimeUnit}
 import scala.concurrent.Promise
+import scala.jdk.CollectionConverters.CollectionHasAsScala
+import scala.util.chaining.scalaUtilChainingOps
 
 class GrpcClient extends StrictLogging {
   private val marshaller = new ByteMarshaller
 
-  def send(target: String, method: String, request: Message, headers: Map[String, String]): IO[Array[Byte]] = {
+  def send(request: Request): IO[Response[Array[Byte]]] = {
     val methodDescriptor = MethodDescriptor
       .newBuilder(marshaller, marshaller)
-      .setFullMethodName(method)
+      .setFullMethodName(request.method)
       .setType(MethodDescriptor.MethodType.UNARY)
       .build()
 
     val channelBuilder: NettyChannelBuilder =
       NettyChannelBuilder
-        .forTarget(target)
+        .forTarget(request.target)
         .nameResolverFactory(new DnsNameResolverProvider)
         .usePlaintext
 
-    val promise = Promise.apply[Array[Byte]]()
-    val listener = new PromiseListener[Array[Byte]](promise)
+    val responsePromise = Promise.apply[Array[Byte]]()
+    val headersPromise = Promise.apply[Metadata]()
 
-    val metadata = new Metadata()
-    headers.foreach { case (key, value) =>
-      metadata.put(Metadata.Key.of(key, Metadata.ASCII_STRING_MARSHALLER), value)
-    }
+    val listener = new PromiseListener[Array[Byte]](responsePromise, headersPromise)
 
     (for {
       executor <- Resource.make(IO(Executors.newSingleThreadExecutor))(executor => IO(executor.shutdown()))
@@ -42,15 +41,31 @@ class GrpcClient extends StrictLogging {
       options = CallOptions.DEFAULT.withDeadlineAfter(3L, TimeUnit.SECONDS).withExecutor(executor)
       call <- Resource.make(IO(channel.newCall(methodDescriptor, options)))(call => IO(call.cancel("Call is cancelled", null)))
     } yield call).use { call =>
-       processCall(call, listener, request.toByteArray, metadata) *> IO.fromFuture(IO(promise.future))
+      for {
+        _ <- processCall(call, listener, request.message.toByteArray, toMetadata(request.headers))
+        response <- IO.fromFuture(IO(responsePromise.future))
+        metadata <- IO.fromFuture(IO(headersPromise.future))
+      } yield Response(response, fromMetadata(metadata))
     }
   }
 
-  def sendAndParse[T <: Message](target: String, method: String, request: Message, headers: Map[String, String])(implicit parser: Parser[T]): IO[T] =
+  private def toMetadata(headers: Map[String, String]) =
+     new Metadata().tap { metadata =>
+       headers.foreach { case (key, value) =>
+         metadata.put(Metadata.Key.of(key, Metadata.ASCII_STRING_MARSHALLER), value)
+       }
+     }
+
+  private def fromMetadata(metadata: Metadata): Map[String, String] =
+    metadata.keys.asScala.map { key =>
+      (key, metadata.get(Metadata.Key.of(key, Metadata.ASCII_STRING_MARSHALLER)))
+    }.toMap
+
+  def sendAndParse[T <: Message](request: Request)(implicit parser: Parser[T]): IO[Response[T]] =
     for {
-      responseBytes <- send(target, method, request, headers)
-      response <- IO(parser.parseFrom(responseBytes))
-    } yield response
+      response <- send(request)
+      message <- IO(parser.parseFrom(response.message))
+    } yield response.copy(message = message)
 
   private def processCall[T](call: ClientCall[T, T], listener: Listener[T], request: T, metadata: Metadata): IO[Unit] =
     IO.blocking {

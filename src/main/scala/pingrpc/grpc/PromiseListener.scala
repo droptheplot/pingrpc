@@ -4,10 +4,13 @@ import io.grpc.{ClientCall, Metadata, Status}
 
 import scala.concurrent.Promise
 
-class PromiseListener[T](promise: Promise[T]) extends ClientCall.Listener[T] {
+class PromiseListener[T](responsePromise: Promise[T], headersPromise: Promise[Metadata]) extends ClientCall.Listener[T] {
+  override def onHeaders(headers: Metadata): Unit =
+    headersPromise.success(headers)
+
   override def onMessage(message: T): Unit =
-    promise.success(message)
+    responsePromise.success(message)
 
   override def onClose(status: Status, trailers: Metadata): Unit =
-    if (!status.isOk) promise.failure(status.asException)
+    if (!status.isOk) responsePromise.failure(status.asException)
 }

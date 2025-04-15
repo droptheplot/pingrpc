@@ -13,24 +13,28 @@ class ReflectionManager(grpcClient: GrpcClient) {
   implicit val reflectionParser: Parser[ServerReflectionResponse] = ServerReflectionResponse.parser
 
   def getServices(target: String): IO[List[ServiceResponse]] = {
-    val request = ServerReflectionRequest
+    val message = ServerReflectionRequest
       .newBuilder()
       .setListServices(new String)
       .build()
 
+    val request = Request(target, reflectionServerName, message, Map.empty)
+
     grpcClient
-      .sendAndParse[ServerReflectionResponse](target, reflectionServerName, request, Map.empty)
-      .map(_.getListServicesResponse.getServiceList.asScala.toList)
+      .sendAndParse[ServerReflectionResponse](request)
+      .map(_.message.getListServicesResponse.getServiceList.asScala.toList)
   }
 
   def getFileDescriptors(target: String, symbol: String): IO[List[FileDescriptorProto]] = {
-    val request = ServerReflectionRequest
+    val message = ServerReflectionRequest
       .newBuilder()
       .setFileContainingSymbol(symbol)
       .build()
 
+    val request = Request(target, reflectionServerName, message, Map.empty)
+
     grpcClient
-      .sendAndParse[ServerReflectionResponse](target, reflectionServerName, request, Map.empty)
-      .map(_.getFileDescriptorResponse.getFileDescriptorProtoList.asScala.toList.map(FileDescriptorProto.parseFrom))
+      .sendAndParse[ServerReflectionResponse](request)
+      .map(_.message.getFileDescriptorResponse.getFileDescriptorProtoList.asScala.toList.map(FileDescriptorProto.parseFrom))
   }
 }
