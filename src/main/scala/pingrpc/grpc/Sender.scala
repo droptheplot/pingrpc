@@ -1,7 +1,6 @@
 package pingrpc.grpc
 
 import cats.effect.IO
-import cats.implicits.catsSyntaxMonadError
 import com.google.protobuf.util.JsonFormat
 import com.google.protobuf.{Descriptors, DynamicMessage}
 import com.typesafe.scalalogging.StrictLogging
@@ -14,11 +13,11 @@ class Sender(grpcClient: GrpcClient) extends StrictLogging {
       method: String,
       target: String,
       json: String
-  ): IO[String] = for {
+  ): IO[Response[String]] = for {
     message <- ProtoUtils.messageFromJson(json, requestDescriptor)
     request = Request(target, method, message, Map.empty)
     parser = DynamicMessage.getDefaultInstance(responseDescriptor).getParserForType
     response <- grpcClient.send(request)(parser)
     json <- IO(JsonFormat.printer.preservingProtoFieldNames.print(response.message))
-  } yield json
+  } yield response.copy(message = json)
 }

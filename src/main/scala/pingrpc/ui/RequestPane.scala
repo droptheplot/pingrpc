@@ -9,14 +9,14 @@ import javafx.scene.layout.{HBox, Pane, VBox}
 import scala.util.chaining.scalaUtilChainingOps
 
 class RequestPane(
-                   urlField: TextField,
-                   jsonArea: TextArea,
-                   syncButton: Button,
-                   submitButton: Button,
-                   servicesBox: ComboBox[ServiceResponse],
-                   methodsBox: ComboBox[MethodDescriptorProto],
-                   formPane: ScrollPane,
-                   tabPane: TabPane
+    urlField: TextField,
+    jsonArea: TextArea,
+    syncButton: Button,
+    submitButton: Button,
+    servicesBox: ComboBox[ServiceResponse],
+    methodsBox: ComboBox[MethodDescriptorProto],
+    formPane: ScrollPane,
+    tabPane: TabPane
 ) {
   private val requestLabel = new Label("REQUEST")
     .tap(_.setFont(boldFont))

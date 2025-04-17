@@ -9,6 +9,7 @@ import javafx.scene.control._
 import javafx.scene.layout._
 import pingrpc.form.Form
 import pingrpc.grpc.{CurlPrinter, FullMessageName, ReflectionManager, Sender}
+import pingrpc.headers.Headers
 import pingrpc.proto.{MethodDescriptorProtoConverter, ProtoUtils, ServiceResponseConverter}
 
 import scala.collection.mutable
@@ -35,6 +36,9 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
 
   private lazy val formPane = new ScrollPane()
   VBox.setVgrow(formPane, Priority.ALWAYS)
+
+  private lazy val responseHeadersPane = new ScrollPane()
+  VBox.setVgrow(responseHeadersPane, Priority.ALWAYS)
 
   private val tabPane = new TabPane()
     .tap(_.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE))
@@ -163,10 +167,13 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
       _ = logger.info(json)
       curlText = CurlPrinter.print(serviceResponse, methodDescriptorProto, urlField.getText, json)
       _ = curlArea.setText(curlText)
-      responseText <- sender.send(requestDescriptor, responseDescriptor, method, urlField.getText, json).attempt.unsafeRunSync
-    } yield responseText) match {
-      case Right(responseText) =>
-        jsonArea.setText(responseText)
+      response <- sender.send(requestDescriptor, responseDescriptor, method, urlField.getText, json).attempt.unsafeRunSync
+      headersNode = new Headers(response.headers).toPane
+      _ = responseHeadersPane.setContent(headersNode)
+      _ = headersNode.prefWidthProperty.bind(responseHeadersPane.widthProperty)
+    } yield response) match {
+      case Right(response) =>
+        jsonArea.setText(response.message)
       case Left(e: StatusRuntimeException) =>
         jsonArea.setText(e.toString)
       case Left(e) =>
@@ -176,7 +183,7 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
 
   def build: Pane = {
     val requestPane = new RequestPane(urlField, requestArea, syncButton, submitButton, servicesBox, methodsBox, formPane, tabPane).build
-    val responsePane = new ResponsePane(jsonArea, curlArea, responseMessageLabel).build
+    val responsePane = new ResponsePane(jsonArea, curlArea, responseMessageLabel, responseHeadersPane).build
 
     val requestColumn = new ColumnConstraints().tap(_.setPercentWidth(50))
     val responseColumn = new ColumnConstraints().tap(_.setPercentWidth(50))
