@@ -12,12 +12,14 @@ class Sender(grpcClient: GrpcClient) extends StrictLogging {
       responseDescriptor: Descriptors.Descriptor,
       method: String,
       target: String,
-      json: String
+      requestJson: String
   ): IO[Response[String]] = for {
-    message <- ProtoUtils.messageFromJson(json, requestDescriptor)
+    _ <- IO(logger.info(s"Request: $requestJson"))
+    message <- ProtoUtils.messageFromJson(requestJson, requestDescriptor)
     request = Request(target, method, message, Map.empty)
     parser = DynamicMessage.getDefaultInstance(responseDescriptor).getParserForType
     response <- grpcClient.send(request)(parser)
-    json <- IO(JsonFormat.printer.preservingProtoFieldNames.print(response.message))
-  } yield response.copy(message = json)
+    responseJson <- IO(JsonFormat.printer.preservingProtoFieldNames.print(response.message))
+    _ = IO(logger.info(s"Response: $responseJson"))
+  } yield response.copy(message = responseJson)
 }

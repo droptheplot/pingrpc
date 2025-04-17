@@ -164,7 +164,6 @@ class Layout(reflectionManager: ReflectionManager, sender: Sender) extends Stric
         case "json" => requestArea.getText
         case _ => "{}"
       }
-      _ = logger.info(json)
       curlText = CurlPrinter.print(serviceResponse, methodDescriptorProto, urlField.getText, json)
       _ = curlArea.setText(curlText)
       response <- sender.send(requestDescriptor, responseDescriptor, method, urlField.getText, json).attempt.unsafeRunSync
