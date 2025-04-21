@@ -7,7 +7,8 @@ import javafx.scene.image.Image
 import javafx.stage.Stage
 import pingrpc.grpc.{GrpcClient, ReflectionManager, Sender}
 import pingrpc.server.HelloServer
-import pingrpc.ui.Layout
+import pingrpc.ui.controllers.ActionController
+import pingrpc.ui.views.LayoutView
 
 import scala.concurrent.ExecutionContext
 import scala.util.Try
@@ -17,10 +18,11 @@ class AppFx extends Application {
     val grpcClient = new GrpcClient
     val sender = new Sender(grpcClient)
     val reflectionManager = new ReflectionManager(grpcClient)
-    val layout = new Layout(reflectionManager, sender)
+    val actionController = new ActionController(reflectionManager, sender)
+    val layout = new LayoutView(actionController)
 
     primaryStage.setTitle("PingRPC")
-    primaryStage.setScene(new Scene(layout.build, 1200, 800))
+    primaryStage.setScene(new Scene(layout, 1200, 800))
 
     Try(getClass.getResourceAsStream("/icon.png"))
       .map(new Image(_))

@@ -1,14 +1,15 @@
-package pingrpc.ui
+package pingrpc.ui.views
 
 import com.google.protobuf.DescriptorProtos.MethodDescriptorProto
 import io.grpc.reflection.v1.ServiceResponse
 import javafx.geometry.Insets
 import javafx.scene.control._
 import javafx.scene.layout.{HBox, Pane, VBox}
+import pingrpc.ui.{boldFont, grayColor}
 
 import scala.util.chaining.scalaUtilChainingOps
 
-class RequestPane(
+class RequestView(
     urlField: TextField,
     jsonArea: TextArea,
     syncButton: Button,
@@ -17,7 +18,7 @@ class RequestPane(
     methodsBox: ComboBox[MethodDescriptorProto],
     formPane: ScrollPane,
     tabPane: TabPane
-) {
+) extends VBox {
   private val requestLabel = new Label("REQUEST")
     .tap(_.setFont(boldFont))
     .tap(_.setTextFill(grayColor))
@@ -44,12 +45,11 @@ class RequestPane(
   tabPane.getTabs.add(formTab)
   tabPane.getTabs.add(jsonTab)
 
-  def build: Pane = new VBox()
-    .tap(_.setSpacing(10))
-    .tap(_.setPadding(new Insets(10, 5, 10, 10)))
-    .tap(_.getChildren.add(requestLabel))
-    .tap(_.getChildren.add(submitPane))
-    .tap(_.getChildren.add(servicesBox))
-    .tap(_.getChildren.add(methodsBox))
-    .tap(_.getChildren.add(tabPane))
+  setSpacing(10)
+  setPadding(new Insets(10, 5, 10, 10))
+  getChildren.add(requestLabel)
+  getChildren.add(submitPane)
+  getChildren.add(servicesBox)
+  getChildren.add(methodsBox)
+  getChildren.add(tabPane)
 }
