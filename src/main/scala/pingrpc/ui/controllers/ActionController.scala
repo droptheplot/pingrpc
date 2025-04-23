@@ -2,16 +2,17 @@ package pingrpc.ui.controllers
 
 import cats.effect.unsafe.implicits.global
 import com.google.protobuf.DescriptorProtos.MethodDescriptorProto
+import com.google.protobuf.InvalidProtocolBufferException
 import com.typesafe.scalalogging.StrictLogging
-import io.grpc.StatusRuntimeException
 import io.grpc.reflection.v1.ServiceResponse
+import io.grpc.{Status, StatusException}
 import javafx.event.ActionEvent
 import javafx.scene.control._
 import pingrpc.form.Form
 import pingrpc.grpc.{CurlPrinter, FullMessageName, ReflectionManager, Sender}
 import pingrpc.proto.ProtoUtils
 import pingrpc.ui.State
-import pingrpc.ui.views.MetadataView
+import pingrpc.ui.views.{AlertView, MetadataView}
 
 class ActionController(reflectionManager: ReflectionManager, sender: Sender) extends StrictLogging {
   def serviceAction[T <: ComboBox[ServiceResponse]](
@@ -79,9 +80,13 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender) ext
           .foreach(servicesBox.getItems.add)
         servicesBox.getSelectionModel.select(0)
         servicesBox.setDisable(false)
-      case Left(_) =>
+      case Left(error: StatusException) =>
         methodsBox.setDisable(true)
         servicesBox.setDisable(true)
+
+        if (error.getStatus.getCode == Status.UNIMPLEMENTED.getCode)
+          new AlertView(s"${urlField.getText} does not support reflection", error.getMessage).showAndWait
+        else new AlertView(s"${urlField.getText} is not available", error.getMessage).showAndWait
     }
   }
 
@@ -127,10 +132,12 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender) ext
     } yield response) match {
       case Right(response) =>
         jsonArea.setText(response.message)
-      case Left(e: StatusRuntimeException) =>
-        jsonArea.setText(e.toString)
-      case Left(e) =>
-        jsonArea.setText(e.toString)
+      case Left(error: StatusException) =>
+        new AlertView("Server responded with an error", error.getMessage).showAndWait
+      case Left(error: InvalidProtocolBufferException) =>
+        new AlertView("Cannot build request", error.getMessage).showAndWait
+      case Left(error) =>
+        new AlertView("Unknown error", error.toString).showAndWait
     }
   }
 }
