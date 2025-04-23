@@ -25,7 +25,7 @@ case class FormField(fieldDescriptor: FieldDescriptor, node: Node) extends Form 
   }
 
   override def toJson: Json = fieldDescriptor.getJavaType match {
-    case JavaType.INT | JavaType.LONG | JavaType.FLOAT | JavaType.DOUBLE =>
+    case JavaType.INT =>
       parseNumberToJson(fieldDescriptor.getJavaType, node.asInstanceOf[TextField].getText)
         .map(value => Json.obj(fieldDescriptor.getName -> wrapJson(fieldDescriptor, value)))
         .getOrElse(Json.obj())
@@ -34,7 +34,7 @@ case class FormField(fieldDescriptor: FieldDescriptor, node: Node) extends Form 
         .filter(_ == true)
         .map(_ => Json.obj(fieldDescriptor.getName -> wrapJson(fieldDescriptor, Json.fromBoolean(true))))
         .getOrElse(Json.obj())
-    case JavaType.STRING | JavaType.BYTE_STRING | JavaType.LONG | JavaType.DOUBLE =>
+    case JavaType.STRING | JavaType.BYTE_STRING | JavaType.LONG | JavaType.DOUBLE | JavaType.FLOAT =>
       Option(node.asInstanceOf[TextField].getText)
         .filter(_.nonEmpty)
         .map(value => Json.obj(fieldDescriptor.getName -> wrapJson(fieldDescriptor, Json.fromString(value))))
