@@ -4,7 +4,7 @@ import atlantafx.base.theme.PrimerLight
 import javafx.application.Application
 import javafx.scene.Scene
 import javafx.scene.image.Image
-import javafx.stage.Stage
+import javafx.stage.{Screen, Stage}
 import pingrpc.grpc.{GrpcClient, ReflectionManager, Sender}
 import pingrpc.server.HelloServer
 import pingrpc.ui.controllers.ActionController
@@ -21,8 +21,10 @@ class AppFx extends Application {
     val actionController = new ActionController(reflectionManager, sender)
     val layout = new LayoutView(actionController)
 
+    val screenBounds = Screen.getPrimary.getBounds
+
     primaryStage.setTitle("PingRPC")
-    primaryStage.setScene(new Scene(layout, 1200, 800))
+    primaryStage.setScene(new Scene(layout, screenBounds.getWidth * 0.83, screenBounds.getHeight * 0.74))
 
     Try(getClass.getResourceAsStream("/icon.png"))
       .map(new Image(_))
