@@ -1,7 +1,5 @@
 package pingrpc.ui.views
 
-import com.google.protobuf.DescriptorProtos.MethodDescriptorProto
-import io.grpc.reflection.v1.ServiceResponse
 import javafx.geometry.Insets
 import javafx.scene.control._
 import javafx.scene.layout.{HBox, Pane, VBox}
@@ -14,8 +12,8 @@ class RequestView(
     jsonArea: TextArea,
     syncButton: Button,
     submitButton: Button,
-    servicesBox: ComboBox[ServiceResponse],
-    methodsBox: ComboBox[MethodDescriptorProto],
+    servicesBox: ComboBox[_],
+    methodsBox: ComboBox[_],
     formPane: ScrollPane,
     tabPane: TabPane
 ) extends VBox {

@@ -19,7 +19,7 @@ libraryDependencies += "io.grpc" % "grpc-stub" % "1.71.0"
 libraryDependencies += "io.grpc" % "grpc-services" % "1.71.0"
 libraryDependencies += "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion
 
-libraryDependencies += "com.google.protobuf" % "protobuf-java-util" % "4.30.0"
+libraryDependencies += "com.google.protobuf" % "protobuf-java-util" % "3.25.7"
 
 libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.19"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % "test"
@@ -34,6 +34,8 @@ libraryDependencies += "io.circe" %% "circe-core" % "0.14.12"
 libraryDependencies += "io.circe" %% "circe-generic" % "0.14.12"
 libraryDependencies += "io.circe" %% "circe-parser" % "0.14.12"
 
+libraryDependencies += "net.harawata" % "appdirs" % "1.4.0"
+
 enablePlugins(JavaAppPackaging)
 enablePlugins(LauncherJarPlugin)
 
@@ -45,5 +47,6 @@ assemblyMergeStrategy in assembly := {
 }
 
 Compile / PB.targets := Seq(
-  scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
+  PB.gens.java -> (Compile / sourceManaged).value,
+  scalapb.gen(javaConversions=true) -> (Compile / sourceManaged).value
 )

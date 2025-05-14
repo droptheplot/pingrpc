@@ -1,12 +1,13 @@
 package pingrpc.proto
 
 import cats.effect.IO
-import com.google.protobuf.DescriptorProtos.{FileDescriptorProto, MethodDescriptorProto, ServiceDescriptorProto}
+import com.google.protobuf.DescriptorProtos.{FileDescriptorProto, ServiceDescriptorProto}
 import com.google.protobuf.Descriptors.{Descriptor, FileDescriptor}
 import com.google.protobuf.util.JsonFormat
 import com.google.protobuf.{DynamicMessage, Message}
 import pingrpc.grpc.FullMessageName
-import io.grpc.reflection.v1.ServiceResponse
+import protobuf.MethodOuterClass.Method
+import protobuf.ServiceOuterClass.Service
 
 import scala.annotation.tailrec
 import scala.jdk.CollectionConverters._
@@ -48,6 +49,6 @@ object ProtoUtils {
     IO(JsonFormat.parser.ignoringUnknownFields.merge(requestText, builder)).map(_ => builder.build)
   }
 
-  def buildMethodName(serviceResponse: ServiceResponse, methodDescriptorProto: MethodDescriptorProto) =
-    s"${serviceResponse.getName}/${methodDescriptorProto.getName}"
+  def buildMethodName(service: Service, method: Method) =
+    s"${service.getName}/${method.getName}"
 }

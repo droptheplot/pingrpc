@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package protobuf;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/descriptor.proto";
+import "service.proto";
+import "method.proto";
+
+message State {
+  string url = 1;
+
+  repeated google.protobuf.FileDescriptorProto file_descriptor_protos = 100;
+
+  repeated Service services = 101;
+  Service selected_service = 102;
+
+  repeated Method methods = 103;
+  Method selected_method = 104;
+
+  google.protobuf.DescriptorProto request_descriptor = 200;
+  google.protobuf.Any request = 201;
+
+  google.protobuf.DescriptorProto response_descriptor = 300;
+  google.protobuf.Any response = 301;
+}

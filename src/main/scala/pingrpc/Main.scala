@@ -7,6 +7,7 @@ import javafx.scene.image.Image
 import javafx.stage.{Screen, Stage}
 import pingrpc.grpc.{GrpcClient, ReflectionManager, Sender}
 import pingrpc.server.HelloServer
+import pingrpc.storage.StateManager
 import pingrpc.ui.controllers.ActionController
 import pingrpc.ui.views.LayoutView
 
@@ -16,9 +17,10 @@ import scala.util.Try
 class AppFx extends Application {
   override def start(primaryStage: Stage): Unit = {
     val grpcClient = new GrpcClient
-    val sender = new Sender(grpcClient)
+    val stateManager = new StateManager
+    val sender = new Sender(grpcClient, stateManager)
     val reflectionManager = new ReflectionManager(grpcClient)
-    val actionController = new ActionController(reflectionManager, sender)
+    val actionController = new ActionController(reflectionManager, sender, stateManager)
     val layout = new LayoutView(actionController)
 
     val screenBounds = Screen.getPrimary.getBounds

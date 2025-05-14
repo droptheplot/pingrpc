@@ -1,13 +1,14 @@
 package pingrpc.ui.views
 
-import com.google.protobuf.DescriptorProtos.MethodDescriptorProto
 import com.typesafe.scalalogging.StrictLogging
-import io.grpc.reflection.v1.ServiceResponse
+import javafx.beans.value.{ChangeListener, ObservableValue}
 import javafx.scene.control._
 import javafx.scene.layout._
-import pingrpc.proto.{MethodDescriptorProtoConverter, ServiceResponseConverter}
+import pingrpc.proto.{MethodConverter, ServiceConverter}
 import pingrpc.ui.controllers.ActionController
 import pingrpc.ui.{grayColor, monospacedFont}
+import protobuf.MethodOuterClass.Method
+import protobuf.ServiceOuterClass.Service
 
 import scala.util.chaining.scalaUtilChainingOps
 
@@ -54,15 +55,15 @@ class LayoutView(controller: ActionController) extends FlowPane with StrictLoggi
 
   private val responseMessageLabel = new Label("...").tap(_.setTextFill(grayColor))
 
-  private lazy val servicesBox: ComboBox[ServiceResponse] = new ComboBox[ServiceResponse]()
-    .tap(_.setConverter(new ServiceResponseConverter))
+  private val servicesBox: ComboBox[Service] = new ComboBox[Service]()
+    .tap(_.setConverter(new ServiceConverter))
     .tap(_.setPrefWidth(Double.MaxValue))
     .tap(_.setPromptText("..."))
     .tap(_.setDisable(true))
     .tap(_.setOnAction(controller.serviceAction(urlField, methodsBox)(_)))
 
-  private lazy val methodsBox: ComboBox[MethodDescriptorProto] = new ComboBox[MethodDescriptorProto]()
-    .tap(_.setConverter(new MethodDescriptorProtoConverter))
+  private val methodsBox: ComboBox[Method] = new ComboBox[Method]()
+    .tap(_.setConverter(new MethodConverter))
     .tap(_.setPrefWidth(Double.MaxValue))
     .tap(_.setPromptText("..."))
     .tap(_.setDisable(true))
@@ -89,4 +90,6 @@ class LayoutView(controller: ActionController) extends FlowPane with StrictLoggi
 
   gridPane.prefWidthProperty.bind(widthProperty)
   gridPane.prefHeightProperty.bind(heightProperty)
+
+  controller.applyState(urlField, servicesBox, methodsBox)
 }
