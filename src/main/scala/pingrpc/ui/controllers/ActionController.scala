@@ -3,7 +3,7 @@ package pingrpc.ui.controllers
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.google.protobuf.DescriptorProtos.MethodDescriptorProto
-import com.google.protobuf.{Any, DynamicMessage, InvalidProtocolBufferException}
+import com.google.protobuf.{DynamicMessage, InvalidProtocolBufferException}
 import com.typesafe.scalalogging.StrictLogging
 import io.grpc.reflection.v1.ServiceResponse
 import io.grpc.{Status, StatusException}
@@ -61,7 +61,7 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
     Option(e.getSource.asInstanceOf[T].getSelectionModel.getSelectedItem).foreach { method =>
       (for {
         _ <- IO(logger.info(s"Method `${method.getName}` is selected"))
-        fullMessageName <- IO.fromOption(FullMessageName.parse(method.getOutputType))(
+        responseMessageName <- IO.fromOption(FullMessageName.parse(method.getOutputType))(
           new Throwable(s"Cannot parse full message name from `${method.getOutputType}`")
         )
         fileDescriptors = ProtoUtils.toFileDescriptors(stateManager.currentState.getFileDescriptorProtosList.asScala.toList)
@@ -70,11 +70,14 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
           new Throwable(s"Cannot find request descriptor for `$requestMessageName`")
         )
         _ <- stateManager.update(_.setSelectedMethod(method))
+        _ <- IO.whenA(!stateManager.currentState.getRequest.getTypeUrl.endsWith(requestMessageName.toString))(
+          stateManager.update(_.clearRequest.clearResponse)
+        )
         requestOpt = Try(DynamicMessage.getDefaultInstance(descriptor).toBuilder.mergeFrom(stateManager.currentState.getRequest.getValue.toByteArray).build)
         form = Form.build(descriptor, requestOpt.toOption)
-      } yield (form, fullMessageName)).attempt.unsafeRunSync match {
-        case Right((form, fullMessageName)) =>
-          responseMessageLabel.setText(fullMessageName.toString)
+      } yield (form, responseMessageName)).attempt.unsafeRunSync match {
+        case Right((form, responseMessageName)) =>
+          responseMessageLabel.setText(responseMessageName.toString)
           formPane.setContent(form.toNode)
           formPane.setUserData(form)
           submitButton.setDisable(false)
