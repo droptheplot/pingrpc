@@ -3,7 +3,7 @@ package pingrpc.ui.controllers
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 import com.google.protobuf.DescriptorProtos.MethodDescriptorProto
-import com.google.protobuf.InvalidProtocolBufferException
+import com.google.protobuf.{Any, DynamicMessage, InvalidProtocolBufferException}
 import com.typesafe.scalalogging.StrictLogging
 import io.grpc.reflection.v1.ServiceResponse
 import io.grpc.{Status, StatusException}
@@ -19,6 +19,7 @@ import protobuf.ServiceOuterClass.Service
 import protobuf.StateOuterClass.State
 
 import scala.jdk.CollectionConverters._
+import scala.util.Try
 
 class ActionController(reflectionManager: ReflectionManager, sender: Sender, stateManager: StateManager) extends StrictLogging {
   def serviceAction[T <: ComboBox[Service]](
@@ -69,7 +70,8 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
           new Throwable(s"Cannot find request descriptor for `$requestMessageName`")
         )
         _ <- stateManager.update(_.setSelectedMethod(method))
-        form = Form.build(descriptor)
+        requestOpt = Try(DynamicMessage.getDefaultInstance(descriptor).toBuilder.mergeFrom(stateManager.currentState.getRequest.getValue.toByteArray).build)
+        form = Form.build(descriptor, requestOpt.toOption)
       } yield (form, fullMessageName)).attempt.unsafeRunSync match {
         case Right((form, fullMessageName)) =>
           responseMessageLabel.setText(fullMessageName.toString)
