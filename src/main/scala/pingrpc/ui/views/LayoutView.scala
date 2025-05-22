@@ -67,7 +67,7 @@ class LayoutView(controller: ActionController) extends FlowPane with StrictLoggi
     .tap(_.setPrefWidth(Double.MaxValue))
     .tap(_.setPromptText("..."))
     .tap(_.setDisable(true))
-    .tap(_.setOnAction(controller.methodAction(responseMessageLabel, submitButton, formPane)(_)))
+    .tap(_.setOnAction(controller.methodAction(responseMessageLabel, submitButton, formPane, jsonArea)(_)))
 
   private val requestView = new RequestView(urlField, requestArea, syncButton, submitButton, servicesBox, methodsBox, formPane, tabPane)
   private val responseView = new ResponseView(jsonArea, curlArea, responseMessageLabel, responseMetadataContainer)

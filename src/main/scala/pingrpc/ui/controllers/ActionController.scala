@@ -2,8 +2,10 @@ package pingrpc.ui.controllers
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import com.google.protobuf.DescriptorProtos.MethodDescriptorProto
-import com.google.protobuf.{DynamicMessage, InvalidProtocolBufferException}
+import com.google.protobuf.DescriptorProtos.{FileDescriptorProto, MethodDescriptorProto}
+import com.google.protobuf.Descriptors.FileDescriptor
+import com.google.protobuf.util.JsonFormat
+import com.google.protobuf.{DescriptorProtos, Descriptors, DynamicMessage, InvalidProtocolBufferException}
 import com.typesafe.scalalogging.StrictLogging
 import io.grpc.reflection.v1.ServiceResponse
 import io.grpc.{Status, StatusException}
@@ -30,12 +32,7 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
       (for {
         _ <- IO(logger.info(s"Service `${service.getName}` is selected"))
         fileDescriptorProtos <- reflectionManager.getFileDescriptors(urlField.getText, service.getName)
-        fullMessageName <- IO.fromOption(FullMessageName.parse(service.getName))(
-          new Throwable(s"Cannot parse full message name from `${service.getName}`")
-        )
-        serviceDescriptorProto <- IO.fromOption(ProtoUtils.findServiceDescriptor(fileDescriptorProtos, fullMessageName))(
-          new Throwable(s"Cannot find service descriptor for `$fullMessageName`")
-        )
+        serviceDescriptorProto <- IO.fromEither(findServiceDescriptor(fileDescriptorProtos, service.getName))
         methods = serviceDescriptorProto.getMethodList.asScala.map(buildProtoMethod).toList
         _ <- stateManager.update(
           _.clearFileDescriptorProtos
@@ -56,31 +53,30 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
   def methodAction[T <: ComboBox[Method]](
       responseMessageLabel: Label,
       submitButton: Button,
-      formPane: ScrollPane
+      formPane: ScrollPane,
+      jsonArea: TextArea
   )(e: ActionEvent): Unit =
     Option(e.getSource.asInstanceOf[T].getSelectionModel.getSelectedItem).foreach { method =>
       (for {
         _ <- IO(logger.info(s"Method `${method.getName}` is selected"))
-        responseMessageName <- IO.fromOption(FullMessageName.parse(method.getOutputType))(
-          new Throwable(s"Cannot parse full message name from `${method.getOutputType}`")
-        )
         fileDescriptors = ProtoUtils.toFileDescriptors(stateManager.currentState.getFileDescriptorProtosList.asScala.toList)
-        requestMessageName <- IO.fromOption(FullMessageName.parse(method.getInputType))(new Throwable(s"Cannot get request name from `${method.getInputType}`"))
-        descriptor <- IO.fromOption(ProtoUtils.findMessageDescriptor(fileDescriptors, requestMessageName))(
-          new Throwable(s"Cannot find request descriptor for `$requestMessageName`")
-        )
+        requestDescriptor <- IO.fromEither(findMessageDescriptor(fileDescriptors, method.getInputType))
+        responseDescriptor <- IO.fromEither(findMessageDescriptor(fileDescriptors, method.getOutputType))
         _ <- stateManager.update(_.setSelectedMethod(method))
-        _ <- IO.whenA(!stateManager.currentState.getRequest.getTypeUrl.endsWith(requestMessageName.toString))(
+        _ <- IO.whenA(!isSameMessageName(stateManager.currentState.getRequest.getTypeUrl, method.getInputType)) {
           stateManager.update(_.clearRequest.clearResponse)
-        )
-        requestOpt = Try(DynamicMessage.getDefaultInstance(descriptor).toBuilder.mergeFrom(stateManager.currentState.getRequest.getValue.toByteArray).build)
-        form = Form.build(descriptor, requestOpt.toOption)
-      } yield (form, responseMessageName)).attempt.unsafeRunSync match {
-        case Right((form, responseMessageName)) =>
-          responseMessageLabel.setText(responseMessageName.toString)
+        }
+        requestOpt = Try(DynamicMessage.getDefaultInstance(requestDescriptor).toBuilder.mergeFrom(stateManager.currentState.getRequest.getValue.toByteArray).build)
+        responseOpt = Try(DynamicMessage.getDefaultInstance(responseDescriptor).toBuilder.mergeFrom(stateManager.currentState.getResponse.getValue.toByteArray).build)
+        responseJson = responseOpt.map(JsonFormat.printer.preservingProtoFieldNames.print).getOrElse("{}")
+        form = Form.build(requestDescriptor, requestOpt.toOption)
+      } yield (form, responseDescriptor.getFullName, responseJson)).attempt.unsafeRunSync match {
+        case Right((form, responseMessageName, responseJson)) =>
+          responseMessageLabel.setText(responseMessageName)
           formPane.setContent(form.toNode)
           formPane.setUserData(form)
           submitButton.setDisable(false)
+          jsonArea.setText(responseJson)
         case Left(error) =>
           submitButton.setDisable(true)
           logger.error(error.getMessage, error)
@@ -88,37 +84,32 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
       }
     }
 
-  def syncAction(urlField: TextField, servicesBox: ComboBox[Service], methodsBox: ComboBox[Method])(e: ActionEvent): Unit = {
-    servicesBox.getItems.clear()
-    methodsBox.getItems.clear()
-
+  def syncAction(urlField: TextField, servicesBox: ComboBox[Service], methodsBox: ComboBox[Method])(e: ActionEvent): Unit =
     reflectionManager
       .getServices(urlField.getText)
       .map(_.map(buildProtoService))
-      .flatTap { services =>
-        stateManager.update(
-          _.setUrl(urlField.getText).clearServices
-            .addAllServices(services.asJava)
-        )
-      }
+      .flatTap(services => stateManager.update(_.setUrl(urlField.getText).clearServices.addAllServices(services.asJava)))
       .attempt
-      .unsafeRunSync match {
-      case Right(services) =>
-        services match {
-          case services @ service :: _ => fillServices(services, service, servicesBox)
-          case _ => ()
-        }
-      case Left(error: StatusException) =>
+      .unsafeRunSync
+      .left
+      .map { error =>
         methodsBox.setDisable(true)
         servicesBox.setDisable(true)
 
-        if (error.getStatus.getCode == Status.UNIMPLEMENTED.getCode)
-          new AlertView(s"${urlField.getText} does not support reflection", error.getMessage).showAndWait
-        else new AlertView(s"${urlField.getText} is not available", error.getMessage).showAndWait
+        error
+      } match {
+      case Right(services @ service :: _) =>
+        servicesBox.getItems.clear()
+        methodsBox.getItems.clear()
+
+        fillServices(services, service, servicesBox)
+      case Left(error: StatusException) if error.getStatus.getCode == Status.UNIMPLEMENTED.getCode =>
+        new AlertView(s"${urlField.getText} does not support reflection", error.getMessage).showAndWait
+      case Left(error: StatusException) =>
+        new AlertView(s"${urlField.getText} is not available", error.getMessage).showAndWait
       case Left(error: Throwable) =>
         new AlertView("Unknown error", error.getMessage).showAndWait
     }
-  }
 
   def submitAction(
       urlField: TextField,
@@ -133,21 +124,11 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
   )(e: ActionEvent): Unit = {
     val service = servicesBox.getSelectionModel.getSelectedItem
     val method = methodsBox.getSelectionModel.getSelectedItem
+    val fileDescriptors = ProtoUtils.toFileDescriptors(stateManager.currentState.getFileDescriptorProtosList.asScala.toList)
 
     (for {
-      requestMessageName <- FullMessageName
-        .parse(method.getInputType)
-        .toRight(new Throwable(s"Cannot get request name from `${method.getInputType}`"))
-      responseMessageName <- FullMessageName
-        .parse(method.getOutputType)
-        .toRight(new Throwable(s"Cannot get response name from `${method.getOutputType}`"))
-      fileDescriptors = ProtoUtils.toFileDescriptors(stateManager.currentState.getFileDescriptorProtosList.asScala.toList)
-      requestDescriptor <- ProtoUtils
-        .findMessageDescriptor(fileDescriptors, requestMessageName)
-        .toRight(new Throwable(s"Cannot find request descriptor for `$requestMessageName`"))
-      responseDescriptor <- ProtoUtils
-        .findMessageDescriptor(fileDescriptors, responseMessageName)
-        .toRight(new Throwable(s"Cannot find response descriptor for `$responseMessageName`"))
+      requestDescriptor <- findMessageDescriptor(fileDescriptors, method.getInputType)
+      responseDescriptor <- findMessageDescriptor(fileDescriptors, method.getOutputType)
       json = tabPane.getSelectionModel.getSelectedItem.getId match {
         case "form" => formPane.getUserData.asInstanceOf[Form].toJson.asObject.filter(_.nonEmpty).map(_.toJson.toString).getOrElse("{}")
         case "json" => requestArea.getText
@@ -213,4 +194,30 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
     Service.newBuilder
       .setName(serviceResponse.getName)
       .build
+
+  private def findMessageDescriptor(fileDescriptors: List[FileDescriptor], name: String): Either[Throwable, Descriptors.Descriptor] =
+    for {
+      fullMessageName <- FullMessageName
+        .parse(name)
+        .toRight(new Throwable(s"Cannot get full message name from `$name`"))
+      descriptor <- ProtoUtils
+        .findMessageDescriptor(fileDescriptors, fullMessageName)
+        .toRight(new Throwable(s"Cannot find response descriptor for `$fullMessageName`"))
+    } yield descriptor
+
+  private def findServiceDescriptor(fileDescriptorProtos: List[FileDescriptorProto], name: String): Either[Throwable, DescriptorProtos.ServiceDescriptorProto] =
+    for {
+      fullMessageName <- FullMessageName
+        .parse(name)
+        .toRight(new Throwable(s"Cannot parse full message name from `$name`"))
+      serviceDescriptorProto <- ProtoUtils
+        .findServiceDescriptor(fileDescriptorProtos, fullMessageName)
+        .toRight(new Throwable(s"Cannot find service descriptor for `$fullMessageName`"))
+    } yield serviceDescriptorProto
+
+  private def isSameMessageName(left: String, right: String): Boolean =
+    (for {
+      leftFullMessageName <- FullMessageName.parse(left)
+      rightFullMessageName <- FullMessageName.parse(right)
+    } yield leftFullMessageName == rightFullMessageName).getOrElse(false)
 }
