@@ -16,7 +16,7 @@ class Sender(grpcClient: GrpcClient, stateManager: StateManager) extends StrictL
       requestJson: String
   ): IO[Response[String]] = for {
     _ <- IO(logger.info(s"Request: $requestJson"))
-    message <- ProtoUtils.messageFromJson(requestJson, requestDescriptor)
+    message <- IO.fromEither(ProtoUtils.messageFromJson(requestJson, requestDescriptor))
     _ <- stateManager.update(_.setRequestDescriptor(requestDescriptor.toProto).setRequest(Any.pack(message)))
     request = Request(target, method, message, Map.empty)
     parser = DynamicMessage.getDefaultInstance(responseDescriptor).getParserForType

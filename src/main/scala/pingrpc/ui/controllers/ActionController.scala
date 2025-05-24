@@ -9,6 +9,7 @@ import com.google.protobuf.{DescriptorProtos, Descriptors, DynamicMessage, Inval
 import com.typesafe.scalalogging.StrictLogging
 import io.grpc.reflection.v1.ServiceResponse
 import io.grpc.{Status, StatusException}
+import javafx.beans.value.{ChangeListener, ObservableValue}
 import javafx.event.ActionEvent
 import javafx.scene.control._
 import pingrpc.form.Form
@@ -130,9 +131,9 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
       requestDescriptor <- findMessageDescriptor(fileDescriptors, method.getInputType)
       responseDescriptor <- findMessageDescriptor(fileDescriptors, method.getOutputType)
       json = tabPane.getSelectionModel.getSelectedItem.getId match {
-        case "form" => formPane.getUserData.asInstanceOf[Form].toJson.asObject.filter(_.nonEmpty).map(_.toJson.toString).getOrElse("{}")
+        case "form" => formPane.getUserData.asInstanceOf[Form].toJson.asObject.filter(_.nonEmpty).map(_.toJson.toString).getOrElse("")
         case "json" => requestArea.getText
-        case _ => "{}"
+        case _ => ""
       }
       curlText = CurlPrinter.print(service, method, urlField.getText, json)
       _ = curlArea.setText(curlText)
@@ -160,6 +161,28 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
 
       methodsBox.fireEvent(new ActionEvent())
     }
+
+  def requestTabsListener(requestArea: TextArea, formPane: ScrollPane, methodsBox: ComboBox[Method]): ChangeListener[Tab] =
+    (_: ObservableValue[_ <: Tab], _: Tab, tab: Tab) =>
+      tab.getId match {
+        case "form" if stateManager.currentState.getRequestDescriptor.hasName =>
+          val fileDescriptors = ProtoUtils.toFileDescriptors(stateManager.currentState.getFileDescriptorProtosList.asScala.toList)
+
+          (for {
+            requestDescriptor <- findMessageDescriptor(fileDescriptors, methodsBox.getSelectionModel.getSelectedItem.getInputType)
+            message <- ProtoUtils.messageFromJson(requestArea.getText, requestDescriptor)
+            form = Form.build(requestDescriptor, Option.when(message.toByteArray.nonEmpty)(message))
+          } yield form) match {
+            case Right(form) =>
+              formPane.setContent(form.toNode)
+              formPane.setUserData(form)
+            case Left(error) =>
+              logger.error("Cannot convert json to form", error)
+          }
+        case "json" =>
+          requestArea.setText(formPane.getUserData.asInstanceOf[Form].toJson.asObject.filter(_.nonEmpty).map(_.toJson.toString).getOrElse(""))
+        case _ =>
+      }
 
   private def fillServices(services: List[Service], selectedService: Service, servicesBox: ComboBox[Service]): Unit =
     if (services.nonEmpty) {

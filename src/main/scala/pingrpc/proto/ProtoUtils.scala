@@ -1,6 +1,5 @@
 package pingrpc.proto
 
-import cats.effect.IO
 import com.google.protobuf.DescriptorProtos.{FileDescriptorProto, ServiceDescriptorProto}
 import com.google.protobuf.Descriptors.{Descriptor, FileDescriptor}
 import com.google.protobuf.util.JsonFormat
@@ -11,6 +10,7 @@ import protobuf.ServiceOuterClass.Service
 
 import scala.annotation.tailrec
 import scala.jdk.CollectionConverters._
+import scala.util.Try
 
 object ProtoUtils {
   def findServiceDescriptor(
@@ -42,12 +42,13 @@ object ProtoUtils {
       case Nil => resolved
     }
 
-  def messageFromJson(json: String, descriptor: Descriptor): IO[Message] = {
-    val builder = DynamicMessage.getDefaultInstance(descriptor).toBuilder
-    val requestText = Option.when(json.nonEmpty)(json).getOrElse("{}")
-
-    IO(JsonFormat.parser.ignoringUnknownFields.merge(requestText, builder)).map(_ => builder.build)
-  }
+  def messageFromJson(json: String, descriptor: Descriptor): Either[Throwable, Message] =
+    Option.when(json.nonEmpty)(json) match {
+      case Some(value) =>
+        val builder = DynamicMessage.getDefaultInstance(descriptor).toBuilder
+        Try(JsonFormat.parser.ignoringUnknownFields.merge(value, builder)).map(_ => builder.build).toEither
+      case None => Right(DynamicMessage.getDefaultInstance(descriptor))
+    }
 
   def buildMethodName(service: Service, method: Method) =
     s"${service.getName}/${method.getName}"

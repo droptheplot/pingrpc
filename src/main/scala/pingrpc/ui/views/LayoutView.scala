@@ -37,6 +37,7 @@ class LayoutView(controller: ActionController) extends FlowPane with StrictLoggi
 
   private val tabPane = new TabPane()
     .tap(_.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE))
+    .tap(_.getSelectionModel.selectedItemProperty.addListener(controller.requestTabsListener(requestArea, formPane, methodsBox)))
   VBox.setVgrow(tabPane, Priority.ALWAYS)
 
   private lazy val curlArea: TextArea = new TextArea()
@@ -62,7 +63,7 @@ class LayoutView(controller: ActionController) extends FlowPane with StrictLoggi
     .tap(_.setDisable(true))
     .tap(_.setOnAction(controller.serviceAction(urlField, methodsBox)(_)))
 
-  private val methodsBox: ComboBox[Method] = new ComboBox[Method]()
+  private lazy val methodsBox: ComboBox[Method] = new ComboBox[Method]()
     .tap(_.setConverter(new MethodConverter))
     .tap(_.setPrefWidth(Double.MaxValue))
     .tap(_.setPromptText("..."))
