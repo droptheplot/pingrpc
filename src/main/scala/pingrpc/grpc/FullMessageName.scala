@@ -5,11 +5,9 @@ case class FullMessageName(packageName: String, messageName: String) {
 }
 
 object FullMessageName {
-  def parse(value: String): Option[FullMessageName] = {
-    val parts = value.split("/").lastOption.map(_.split('.').filter(_.nonEmpty)).toList.flatten
-
-    parts.lastOption.map { messageName =>
-      FullMessageName(parts.dropRight(1).mkString("."), messageName)
+  def parse(value: String): Option[FullMessageName] =
+    value.split("/").lastOption.map(_.split('.').filter(_.nonEmpty)).toList.flatten match {
+      case packageName :+ messageName if packageName.nonEmpty => Some(FullMessageName(packageName.mkString("."), messageName))
+      case _ => None
     }
-  }
 }
