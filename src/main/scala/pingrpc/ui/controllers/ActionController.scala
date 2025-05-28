@@ -14,7 +14,7 @@ import javafx.event.ActionEvent
 import javafx.scene.control._
 import pingrpc.form.Form
 import pingrpc.grpc.{CurlPrinter, FullMessageName, ReflectionManager, Sender}
-import pingrpc.proto.ProtoUtils
+import pingrpc.proto.{ProtoUtils, serviceOrdering}
 import pingrpc.storage.StateManager
 import pingrpc.ui.views.{AlertView, MetadataView}
 import protobuf.MethodOuterClass.Method
@@ -187,13 +187,7 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
   private def fillServices(services: List[Service], selectedService: Service, servicesBox: ComboBox[Service]): Unit =
     if (services.nonEmpty) {
       servicesBox.getItems.clear()
-      services
-        .sorted[Service] {
-          case (a, _) if a.getName.startsWith("grpc.reflection") => 1
-          case (_, b) if b.getName.startsWith("grpc.reflection") => -1
-          case (a, b) => a.getName.compareTo(b.getName)
-        }
-        .foreach(servicesBox.getItems.add)
+      services.sorted[Service](serviceOrdering).foreach(servicesBox.getItems.add)
       servicesBox.setDisable(false)
       servicesBox.getSelectionModel.select(selectedService)
     }
