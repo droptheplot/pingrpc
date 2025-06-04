@@ -25,7 +25,7 @@ import protobuf.StateOuterClass.State
 import scala.jdk.CollectionConverters._
 import scala.util.Try
 
-class ActionController(reflectionManager: ReflectionManager, sender: Sender, stateManager: StateManager) extends StrictLogging {
+class AppController(reflectionManager: ReflectionManager, sender: Sender, stateManager: StateManager) extends StrictLogging {
   def serviceAction[T <: ComboBox[Service]](
       urlField: TextField,
       methodsBox: ComboBox[Method]

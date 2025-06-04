@@ -2,11 +2,11 @@ package pingrpc.ui.views
 
 import com.typesafe.scalalogging.StrictLogging
 import javafx.scene.layout._
-import pingrpc.ui.controllers.ActionController
+import pingrpc.ui.controllers.AppController
 
 import scala.util.chaining.scalaUtilChainingOps
 
-class LayoutView(controller: ActionController) extends FlowPane with StrictLogging {
+class AppView(appController: AppController) extends FlowPane with StrictLogging {
   private val requestView = new RequestView
   private val responseView = new ResponseView
 
@@ -30,14 +30,14 @@ class LayoutView(controller: ActionController) extends FlowPane with StrictLoggi
   gridPane.prefHeightProperty.bind(heightProperty)
 
   requestView.methodsBox
-    .setOnAction(controller.methodAction(responseView.responseMessageLabel, requestView.submitButton, requestView.formPane)(_))
+    .setOnAction(appController.methodAction(responseView.responseMessageLabel, requestView.submitButton, requestView.formPane)(_))
 
   requestView.servicesBox
-    .setOnAction(controller.serviceAction(requestView.urlField, requestView.methodsBox)(_))
+    .setOnAction(appController.serviceAction(requestView.urlField, requestView.methodsBox)(_))
 
   requestView.submitButton
     .setOnAction(
-      controller.submitAction(
+      appController.submitAction(
         requestView.urlField,
         requestView.servicesBox,
         requestView.methodsBox,
@@ -51,12 +51,12 @@ class LayoutView(controller: ActionController) extends FlowPane with StrictLoggi
     )
 
   requestView.tabPane.getSelectionModel.selectedItemProperty
-    .addListener(controller.requestTabsListener(requestView.jsonArea, requestView.formPane, requestView.methodsBox))
+    .addListener(appController.requestTabsListener(requestView.jsonArea, requestView.formPane, requestView.methodsBox))
 
   requestView.syncButton
-    .setOnAction(controller.syncAction(requestView.urlField, requestView.servicesBox, requestView.methodsBox)(_))
+    .setOnAction(appController.syncAction(requestView.urlField, requestView.servicesBox, requestView.methodsBox)(_))
 
-  controller.applyState(
+  appController.applyState(
     requestView.urlField,
     requestView.servicesBox,
     requestView.methodsBox,
