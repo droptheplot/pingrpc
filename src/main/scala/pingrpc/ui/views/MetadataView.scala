@@ -1,12 +1,23 @@
 package pingrpc.ui.views
 
-import javafx.scene.control.{ScrollPane, TextField}
+import javafx.beans.binding.Bindings
+import javafx.collections.{FXCollections, MapChangeListener, ObservableList, ObservableMap}
+import javafx.scene.Node
+import javafx.scene.control.TextField
 import javafx.scene.layout.{HBox, Priority, VBox}
 
 import scala.jdk.CollectionConverters._
 import scala.util.chaining.scalaUtilChainingOps
 
-class MetadataView(headers: Map[String, String], container: ScrollPane) extends VBox {
+class MetadataView extends VBox {
+  val headers: ObservableMap[String, String] = FXCollections.observableHashMap()
+  private val nodes: ObservableList[Node] = FXCollections.observableArrayList()
+
+  headers.addListener(new MapChangeListener[String, String] {
+    override def onChanged(change: MapChangeListener.Change[_ <: String, _ <: String]): Unit =
+      nodes.setAll(change.getMap.asScala.map { case (k, v) => toRow(k, v) }.toList.asJava)
+  })
+
   private def toRow(key: String, value: String): HBox = {
     val keyField = new TextField()
       .tap(_.setText(key))
@@ -24,7 +35,6 @@ class MetadataView(headers: Map[String, String], container: ScrollPane) extends 
   }
 
   setSpacing(10)
-  getChildren.addAll(headers.map((toRow _).tupled(_)).toList.asJava)
 
-  prefWidthProperty.bind(container.widthProperty)
+  Bindings.bindContentBidirectional(nodes, getChildren)
 }

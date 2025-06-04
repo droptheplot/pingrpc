@@ -10,13 +10,14 @@ import com.typesafe.scalalogging.StrictLogging
 import io.grpc.reflection.v1.ServiceResponse
 import io.grpc.{Status, StatusException}
 import javafx.beans.value.{ChangeListener, ObservableValue}
+import javafx.collections.ObservableMap
 import javafx.event.ActionEvent
 import javafx.scene.control._
 import pingrpc.form.Form
 import pingrpc.grpc.{CurlPrinter, FullMessageName, ReflectionManager, Sender}
 import pingrpc.proto.{ProtoUtils, serviceOrdering}
 import pingrpc.storage.StateManager
-import pingrpc.ui.views.{AlertView, MetadataView}
+import pingrpc.ui.views.AlertView
 import protobuf.MethodOuterClass.Method
 import protobuf.ServiceOuterClass.Service
 import protobuf.StateOuterClass.State
@@ -54,8 +55,7 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
   def methodAction[T <: ComboBox[Method]](
       responseMessageLabel: Label,
       submitButton: Button,
-      formPane: ScrollPane,
-      jsonArea: TextArea
+      formPane: ScrollPane
   )(e: ActionEvent): Unit =
     Option(e.getSource.asInstanceOf[T].getSelectionModel.getSelectedItem).foreach { method =>
       (for {
@@ -67,17 +67,13 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
         _ <- IO.whenA(!isSameMessageName(stateManager.currentState.getRequest.getTypeUrl, method.getInputType)) {
           stateManager.update(_.clearRequest.clearResponse)
         }
-        requestOpt = Try(DynamicMessage.getDefaultInstance(requestDescriptor).toBuilder.mergeFrom(stateManager.currentState.getRequest.getValue.toByteArray).build)
-        responseOpt = Try(DynamicMessage.getDefaultInstance(responseDescriptor).toBuilder.mergeFrom(stateManager.currentState.getResponse.getValue.toByteArray).build)
-        responseJson = responseOpt.map(JsonFormat.printer.preservingProtoFieldNames.print).getOrElse("{}")
-        form = Form.build(requestDescriptor, requestOpt.toOption)
-      } yield (form, responseDescriptor.getFullName, responseJson)).attempt.unsafeRunSync match {
-        case Right((form, responseMessageName, responseJson)) =>
+        form = Form.build(requestDescriptor, None)
+      } yield (form, responseDescriptor.getFullName)).attempt.unsafeRunSync match {
+        case Right((form, responseMessageName)) =>
           responseMessageLabel.setText(responseMessageName)
           formPane.setContent(form.toNode)
           formPane.setUserData(form)
           submitButton.setDisable(false)
-          jsonArea.setText(responseJson)
         case Left(error) =>
           submitButton.setDisable(true)
           logger.error(error.getMessage, error)
@@ -120,8 +116,8 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
       tabPane: TabPane,
       requestArea: TextArea,
       curlArea: TextArea,
-      responseMetadataContainer: ScrollPane,
-      jsonArea: TextArea
+      jsonArea: TextArea,
+      requestHeaders: ObservableMap[String, String]
   )(e: ActionEvent): Unit = {
     val service = servicesBox.getSelectionModel.getSelectedItem
     val method = methodsBox.getSelectionModel.getSelectedItem
@@ -138,11 +134,10 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
       curlText = CurlPrinter.print(service, method, urlField.getText, json)
       _ = curlArea.setText(curlText)
       response <- sender.send(requestDescriptor, responseDescriptor, ProtoUtils.buildMethodName(service, method), urlField.getText, json).attempt.unsafeRunSync
-      metadataView = new MetadataView(response.headers, responseMetadataContainer)
-      _ = responseMetadataContainer.setContent(metadataView)
     } yield response) match {
       case Right(response) =>
         jsonArea.setText(response.message)
+        requestHeaders.putAll(response.headers.asJava)
       case Left(error: StatusException) =>
         new AlertView("Server responded with an error", error.getMessage).showAndWait
       case Left(error: InvalidProtocolBufferException) =>
@@ -152,14 +147,45 @@ class ActionController(reflectionManager: ReflectionManager, sender: Sender, sta
     }
   }
 
-  def applyState(urlField: TextField, servicesBox: ComboBox[Service], methodsBox: ComboBox[Method]): Unit =
+  def applyState(
+      urlField: TextField,
+      servicesBox: ComboBox[Service],
+      methodsBox: ComboBox[Method],
+      headers: ObservableMap[String, String],
+      formPane: ScrollPane,
+      responseArea: TextArea,
+      submitButton: Button,
+      responseMessageLabel: Label
+  ): Unit =
     stateManager.load().attempt.unsafeRunSync.toOption.filter(_ != State.getDefaultInstance).foreach { state =>
-      urlField.setText(state.getUrl)
-
       fillServices(state.getServicesList.asScala.toList, state.getSelectedService, servicesBox)
       fillMethods(state.getMethodsList.asScala.toList, state.getSelectedMethod, methodsBox)
 
-      methodsBox.fireEvent(new ActionEvent())
+      val fileDescriptors = ProtoUtils.toFileDescriptors(state.getFileDescriptorProtosList.asScala.toList)
+
+      for {
+        requestDescriptor <- findMessageDescriptor(fileDescriptors, state.getSelectedMethod.getInputType)
+        responseDescriptor <- findMessageDescriptor(fileDescriptors, state.getSelectedMethod.getOutputType)
+        requestBuilder = DynamicMessage.getDefaultInstance(requestDescriptor).toBuilder
+        requestOpt = Try(requestBuilder.mergeFrom(state.getRequest.getValue.toByteArray))
+          .map(_.build)
+          .toOption
+        responseBuilder = DynamicMessage.getDefaultInstance(responseDescriptor).toBuilder
+        responseOpt = Try(responseBuilder.mergeFrom(state.getResponse.getValue.toByteArray))
+          .map(_.build)
+          .map(JsonFormat.printer.preservingProtoFieldNames.print)
+      } yield {
+        val form = Form.build(requestDescriptor, requestOpt)
+
+        formPane.setContent(form.toNode)
+        formPane.setUserData(form)
+
+        urlField.setText(state.getUrl)
+        submitButton.setDisable(false)
+        responseMessageLabel.setText(responseDescriptor.getFullName)
+        headers.putAll(state.getResponseHeadersMap)
+        responseOpt.foreach(responseArea.setText)
+      }
     }
 
   def requestTabsListener(requestArea: TextArea, formPane: ScrollPane, methodsBox: ComboBox[Method]): ChangeListener[Tab] =

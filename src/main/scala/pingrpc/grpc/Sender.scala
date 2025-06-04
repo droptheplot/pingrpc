@@ -7,6 +7,8 @@ import com.typesafe.scalalogging.StrictLogging
 import pingrpc.proto.ProtoUtils
 import pingrpc.storage.StateManager
 
+import scala.jdk.CollectionConverters._
+
 class Sender(grpcClient: GrpcClient, stateManager: StateManager) extends StrictLogging {
   def send(
       requestDescriptor: Descriptors.Descriptor,
@@ -21,7 +23,10 @@ class Sender(grpcClient: GrpcClient, stateManager: StateManager) extends StrictL
     request = Request(target, method, message, Map.empty)
     parser = DynamicMessage.getDefaultInstance(responseDescriptor).getParserForType
     response <- grpcClient.send(request)(parser)
-    _ <- stateManager.update(_.setResponseDescriptor(responseDescriptor.toProto).setResponse(Any.pack(response.message)))
+    _ <- stateManager.update(
+      _.setResponseDescriptor(responseDescriptor.toProto)
+        .setResponse(Any.pack(response.message))
+        .putAllResponseHeaders(response.headers.asJava))
     responseJson <- IO(JsonFormat.printer.preservingProtoFieldNames.print(response.message))
     _ = IO(logger.info(s"Response: $responseJson"))
   } yield response.copy(message = responseJson)

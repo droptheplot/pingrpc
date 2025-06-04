@@ -23,4 +23,7 @@ message State {
 
   google.protobuf.DescriptorProto response_descriptor = 300;
   google.protobuf.Any response = 301;
+
+  map<string, string> request_headers = 400;
+  map<string, string> response_headers = 401;
 }
