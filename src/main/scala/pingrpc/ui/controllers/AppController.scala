@@ -5,7 +5,7 @@ import cats.effect.unsafe.implicits.global
 import com.google.protobuf.DescriptorProtos.{FileDescriptorProto, MethodDescriptorProto}
 import com.google.protobuf.Descriptors.FileDescriptor
 import com.google.protobuf.util.JsonFormat
-import com.google.protobuf.{DescriptorProtos, Descriptors, DynamicMessage, InvalidProtocolBufferException}
+import com.google.protobuf.{DescriptorProtos, Descriptors, DynamicMessage}
 import com.typesafe.scalalogging.StrictLogging
 import io.grpc.reflection.v1.ServiceResponse
 import io.grpc.{Status, StatusException}
@@ -17,6 +17,8 @@ import pingrpc.form.Form
 import pingrpc.grpc.{CurlPrinter, FullMessageName, ReflectionManager, Sender}
 import pingrpc.proto.{ProtoUtils, serviceOrdering}
 import pingrpc.storage.StateManager
+import pingrpc.ui.RequestTimer
+import pingrpc.ui.tasks.SubmitTask
 import pingrpc.ui.views.AlertView
 import protobuf.MethodOuterClass.Method
 import protobuf.ServiceOuterClass.Service
@@ -117,34 +119,27 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
       requestArea: TextArea,
       curlArea: TextArea,
       jsonArea: TextArea,
-      requestHeaders: ObservableMap[String, String]
+      responseHeaders: ObservableMap[String, String],
+      responseStatusLabel: Label
   )(e: ActionEvent): Unit = {
     val service = servicesBox.getSelectionModel.getSelectedItem
     val method = methodsBox.getSelectionModel.getSelectedItem
+    val methodName = ProtoUtils.buildMethodName(service, method)
     val fileDescriptors = ProtoUtils.toFileDescriptors(stateManager.currentState.getFileDescriptorProtosList.asScala.toList)
+    val requestTimer = new RequestTimer(responseStatusLabel)
 
-    (for {
-      requestDescriptor <- findMessageDescriptor(fileDescriptors, method.getInputType)
-      responseDescriptor <- findMessageDescriptor(fileDescriptors, method.getOutputType)
-      json = tabPane.getSelectionModel.getSelectedItem.getId match {
-        case "form" => formPane.getUserData.asInstanceOf[Form].toJson.asObject.filter(_.nonEmpty).map(_.toJson.toString).getOrElse("")
-        case "json" => requestArea.getText
-        case _ => ""
-      }
-      curlText = CurlPrinter.print(service, method, urlField.getText, json)
-      _ = curlArea.setText(curlText)
-      response <- sender.send(requestDescriptor, responseDescriptor, ProtoUtils.buildMethodName(service, method), urlField.getText, json).attempt.unsafeRunSync
-    } yield response) match {
-      case Right(response) =>
-        jsonArea.setText(response.message)
-        requestHeaders.putAll(response.headers.asJava)
-      case Left(error: StatusException) =>
-        new AlertView("Server responded with an error", error.getMessage).showAndWait
-      case Left(error: InvalidProtocolBufferException) =>
-        new AlertView("Cannot build request", error.getMessage).showAndWait
-      case Left(error) =>
-        new AlertView("Unknown error", error.toString).showAndWait
+    val json = tabPane.getSelectionModel.getSelectedItem.getId match {
+      case "form" => formPane.getUserData.asInstanceOf[Form].toJson.asObject.filter(_.nonEmpty).map(_.toJson.toString).getOrElse("")
+      case "json" => requestArea.getText
+      case _ => ""
     }
+
+    curlArea.setText(CurlPrinter.print(service, method, urlField.getText, json))
+    responseHeaders.clear()
+    jsonArea.clear()
+
+    val submitTask = new SubmitTask(json, methodName, urlField.getText, requestTimer, jsonArea, responseHeaders, sender, fileDescriptors, method)
+    new Thread(submitTask).start()
   }
 
   def applyState(

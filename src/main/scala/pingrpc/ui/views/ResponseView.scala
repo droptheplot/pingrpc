@@ -31,6 +31,9 @@ class ResponseView extends VBox {
     .tap(_.setFont(monospacedFont))
     .tap(_.setPrefHeight(80))
 
+  val responseStatusLabel = new Label("...")
+    .tap(_.setTextFill(grayColor))
+
   private val responseLabel = new Label("RESPONSE")
     .tap(_.setFont(boldFont))
     .tap(_.setTextFill(grayColor))
@@ -65,6 +68,7 @@ class ResponseView extends VBox {
   setSpacing(10)
   setPadding(new Insets(10, 10, 10, 5))
   getChildren.add(responseLabel)
+  getChildren.add(responseStatusLabel)
   getChildren.add(responseMessageLabel)
   getChildren.add(tabPane)
   getChildren.add(statusLabel)

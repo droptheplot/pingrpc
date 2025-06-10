@@ -1,5 +1,6 @@
 package pingrpc.ui.views
 
+import javafx.application.Platform
 import javafx.beans.binding.Bindings
 import javafx.collections.{FXCollections, MapChangeListener, ObservableList, ObservableMap}
 import javafx.scene.Node
@@ -15,7 +16,10 @@ class MetadataView extends VBox {
 
   headers.addListener(new MapChangeListener[String, String] {
     override def onChanged(change: MapChangeListener.Change[_ <: String, _ <: String]): Unit =
-      nodes.setAll(change.getMap.asScala.map { case (k, v) => toRow(k, v) }.toList.asJava)
+      Platform.runLater(() => {
+        nodes.clear()
+        nodes.setAll(change.getMap.asScala.map { case (k, v) => toRow(k, v) }.toList.asJava)
+      })
   })
 
   private def toRow(key: String, value: String): HBox = {

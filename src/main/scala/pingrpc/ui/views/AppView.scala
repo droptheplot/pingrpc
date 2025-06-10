@@ -46,7 +46,8 @@ class AppView(appController: AppController) extends FlowPane with StrictLogging 
         requestView.jsonArea,
         responseView.curlArea,
         responseView.jsonArea,
-        responseView.metadataView.headers
+        responseView.metadataView.headers,
+        responseView.responseStatusLabel
       )(_)
     )
 
