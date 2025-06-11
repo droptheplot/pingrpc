@@ -8,7 +8,7 @@ import javafx.animation.AnimationTimer
 import javafx.application.Platform
 import javafx.collections.ObservableMap
 import javafx.concurrent.Task
-import javafx.scene.control.TextArea
+import javafx.scene.control.{Button, TextArea}
 import pingrpc.grpc.{FullMessageName, Sender}
 import pingrpc.proto.ProtoUtils
 import pingrpc.ui.views.AlertView
@@ -16,7 +16,7 @@ import protobuf.MethodOuterClass.Method
 
 import scala.jdk.CollectionConverters._
 
-class SubmitTask(
+class SendTask(
     json: String,
     methodName: String,
     url: String,
@@ -25,10 +25,12 @@ class SubmitTask(
     responseHeaders: ObservableMap[String, String],
     sender: Sender,
     fileDescriptors: List[FileDescriptor],
-    method: Method
+    method: Method,
+    sendButton: Button
 ) extends Task[Unit] {
   override def call(): Unit = {
     timer.start()
+    sendButton.setDisable(true)
 
     val responseOpt = for {
       requestDescriptor <- findMessageDescriptor(fileDescriptors, method.getInputType)
@@ -36,6 +38,7 @@ class SubmitTask(
       response <- sender.send(requestDescriptor, responseDescriptor, methodName, url, json).attempt.unsafeRunSync
     } yield response
 
+    sendButton.setDisable(false)
     timer.stop()
 
     responseOpt match {

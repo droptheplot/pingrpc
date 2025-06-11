@@ -30,14 +30,14 @@ class AppView(appController: AppController) extends FlowPane with StrictLogging 
   gridPane.prefHeightProperty.bind(heightProperty)
 
   requestView.methodsBox
-    .setOnAction(appController.methodAction(responseView.responseMessageLabel, requestView.submitButton, requestView.formPane)(_))
+    .setOnAction(appController.methodAction(responseView.responseMessageLabel, requestView.sendButton, requestView.formPane)(_))
 
   requestView.servicesBox
     .setOnAction(appController.serviceAction(requestView.urlField, requestView.methodsBox)(_))
 
-  requestView.submitButton
+  requestView.sendButton
     .setOnAction(
-      appController.submitAction(
+      appController.sendAction(
         requestView.urlField,
         requestView.servicesBox,
         requestView.methodsBox,
@@ -64,7 +64,7 @@ class AppView(appController: AppController) extends FlowPane with StrictLogging 
     responseView.metadataView.headers,
     requestView.formPane,
     responseView.jsonArea,
-    requestView.submitButton,
+    requestView.sendButton,
     responseView.responseMessageLabel
   )
 }

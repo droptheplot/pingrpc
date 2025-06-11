@@ -41,19 +41,20 @@ class RequestView extends VBox {
     .tap(_.setPromptText("..."))
     .tap(_.setDisable(true))
 
-  val submitButton: Button = new Button("Send")
+  val sendButton: Button = new Button("Send")
     .tap(_.setDisable(true))
     .tap(_.getStyleClass.add("accent"))
+    .tap(_.setDefaultButton(true))
 
   private val requestLabel = new Label("REQUEST")
     .tap(_.setFont(boldFont))
     .tap(_.setTextFill(grayColor))
 
-  private lazy val submitPane: Pane = new HBox()
+  private lazy val sendPane: Pane = new HBox()
     .tap(_.setSpacing(10))
     .tap(_.getChildren.add(urlField))
     .tap(_.getChildren.add(syncButton))
-    .tap(_.getChildren.add(submitButton))
+    .tap(_.getChildren.add(sendButton))
 
   private val formContainer = new VBox()
     .tap(_.setPadding(new Insets(10, 0, 0, 0)))
@@ -74,7 +75,7 @@ class RequestView extends VBox {
   setSpacing(10)
   setPadding(new Insets(10, 5, 10, 10))
   getChildren.add(requestLabel)
-  getChildren.add(submitPane)
+  getChildren.add(sendPane)
   getChildren.add(servicesBox)
   getChildren.add(methodsBox)
   getChildren.add(tabPane)

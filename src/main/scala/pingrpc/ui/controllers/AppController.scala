@@ -18,7 +18,7 @@ import pingrpc.grpc.{CurlPrinter, FullMessageName, ReflectionManager, Sender}
 import pingrpc.proto.{ProtoUtils, serviceOrdering}
 import pingrpc.storage.StateManager
 import pingrpc.ui.RequestTimer
-import pingrpc.ui.tasks.SubmitTask
+import pingrpc.ui.tasks.SendTask
 import pingrpc.ui.views.AlertView
 import protobuf.MethodOuterClass.Method
 import protobuf.ServiceOuterClass.Service
@@ -56,7 +56,7 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
 
   def methodAction[T <: ComboBox[Method]](
       responseMessageLabel: Label,
-      submitButton: Button,
+      sendButton: Button,
       formPane: ScrollPane
   )(e: ActionEvent): Unit =
     Option(e.getSource.asInstanceOf[T].getSelectionModel.getSelectedItem).foreach { method =>
@@ -75,15 +75,19 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
           responseMessageLabel.setText(responseMessageName)
           formPane.setContent(form.toNode)
           formPane.setUserData(form)
-          submitButton.setDisable(false)
+          sendButton.setDisable(false)
         case Left(error) =>
-          submitButton.setDisable(true)
+          sendButton.setDisable(true)
           logger.error(error.getMessage, error)
           new AlertView("Unknown error", error.getMessage).showAndWait
       }
     }
 
-  def syncAction(urlField: TextField, servicesBox: ComboBox[Service], methodsBox: ComboBox[Method])(e: ActionEvent): Unit =
+  def syncAction(urlField: TextField, servicesBox: ComboBox[Service], methodsBox: ComboBox[Method])(e: ActionEvent): Unit = {
+    val syncButton = e.getSource.asInstanceOf[Button]
+
+    syncButton.setDisable(true)
+
     reflectionManager
       .getServices(urlField.getText)
       .map(_.map(buildProtoService))
@@ -110,7 +114,10 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
         new AlertView("Unknown error", error.getMessage).showAndWait
     }
 
-  def submitAction(
+    syncButton.setDisable(false)
+  }
+
+  def sendAction(
       urlField: TextField,
       servicesBox: ComboBox[Service],
       methodsBox: ComboBox[Method],
@@ -127,6 +134,7 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
     val methodName = ProtoUtils.buildMethodName(service, method)
     val fileDescriptors = ProtoUtils.toFileDescriptors(stateManager.currentState.getFileDescriptorProtosList.asScala.toList)
     val requestTimer = new RequestTimer(responseStatusLabel)
+    val sendButton: Button = e.getSource.asInstanceOf[Button]
 
     val json = tabPane.getSelectionModel.getSelectedItem.getId match {
       case "form" => formPane.getUserData.asInstanceOf[Form].toJson.asObject.filter(_.nonEmpty).map(_.toJson.toString).getOrElse("")
@@ -138,8 +146,8 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
     responseHeaders.clear()
     jsonArea.clear()
 
-    val submitTask = new SubmitTask(json, methodName, urlField.getText, requestTimer, jsonArea, responseHeaders, sender, fileDescriptors, method)
-    new Thread(submitTask).start()
+    val sendTask = new SendTask(json, methodName, urlField.getText, requestTimer, jsonArea, responseHeaders, sender, fileDescriptors, method, sendButton)
+    new Thread(sendTask).start()
   }
 
   def applyState(
@@ -149,7 +157,7 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
       headers: ObservableMap[String, String],
       formPane: ScrollPane,
       responseArea: TextArea,
-      submitButton: Button,
+      sendButton: Button,
       responseMessageLabel: Label
   ): Unit =
     stateManager.load().attempt.unsafeRunSync.toOption.filter(_ != State.getDefaultInstance).foreach { state =>
@@ -176,7 +184,7 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
         formPane.setUserData(form)
 
         urlField.setText(state.getUrl)
-        submitButton.setDisable(false)
+        sendButton.setDisable(false)
         responseMessageLabel.setText(responseDescriptor.getFullName)
         headers.putAll(state.getResponseHeadersMap)
         responseOpt.foreach(responseArea.setText)
