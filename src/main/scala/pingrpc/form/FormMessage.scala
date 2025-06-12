@@ -42,7 +42,10 @@ case class FormMessage(fieldDescriptor: FieldDescriptor, children: Seq[Form]) ex
             .foldLeft(Json.obj()) { case (acc, form) => form.toJson.deepMerge(acc) }
             .asObject
             .filter(_.nonEmpty)
-            .map(jsonObject => wrapJson(fieldDescriptor, jsonObject.toJson))
+            .map { jsonObject =>
+              if (fieldDescriptor.isMapField) flattenJson(jsonObject)
+              else wrapJson(fieldDescriptor, jsonObject.toJson)
+            }
             .getOrElse(Json.obj())
             .dropEmptyValues
       }

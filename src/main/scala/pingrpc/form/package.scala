@@ -2,12 +2,18 @@ package pingrpc
 
 import com.google.protobuf.Descriptors.FieldDescriptor
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType
-import io.circe.Json
+import io.circe.{Json, JsonObject}
 
 package object form {
   def wrapJson(fieldDescriptor: FieldDescriptor, json: Json): Json =
     if (fieldDescriptor.isRepeated) Json.arr(json)
     else json
+
+  def flattenJson(jsonObject: JsonObject): Json =
+    (for {
+      key <- jsonObject("key").flatMap(_.asString)
+      value <- jsonObject("value")
+    } yield Json.obj(key -> value)).getOrElse(Json.Null)
 
   def parseNumberToJson(javaType: JavaType, text: String): Option[Json] = javaType match {
     case JavaType.INT => text.toIntOption.map(Json.fromInt)
