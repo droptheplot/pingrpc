@@ -50,6 +50,9 @@ object ProtoUtils {
       case None => Right(DynamicMessage.getDefaultInstance(descriptor))
     }
 
+  def messageToJson(message: Message): String =
+    JsonFormat.printer.preservingProtoFieldNames.print(message)
+
   def buildMethodName(service: Service, method: Method) =
     s"${service.getName}/${method.getName}"
 }

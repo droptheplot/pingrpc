@@ -2,7 +2,7 @@ package pingrpc.ui.tasks
 
 import cats.effect.unsafe.implicits.global
 import com.google.protobuf.Descriptors.FileDescriptor
-import com.google.protobuf.{Descriptors, InvalidProtocolBufferException}
+import com.google.protobuf.{Descriptors, InvalidProtocolBufferException, Message}
 import io.grpc.StatusException
 import javafx.animation.AnimationTimer
 import javafx.application.Platform
@@ -17,7 +17,7 @@ import protobuf.MethodOuterClass.Method
 import scala.jdk.CollectionConverters._
 
 class SendTask(
-    json: String,
+    message: Message,
     methodName: String,
     url: String,
     timer: AnimationTimer,
@@ -35,7 +35,7 @@ class SendTask(
     val responseOpt = for {
       requestDescriptor <- findMessageDescriptor(fileDescriptors, method.getInputType)
       responseDescriptor <- findMessageDescriptor(fileDescriptors, method.getOutputType)
-      response <- sender.send(requestDescriptor, responseDescriptor, methodName, url, json).attempt.unsafeRunSync
+      response <- sender.send(requestDescriptor, responseDescriptor, methodName, url, message).attempt.unsafeRunSync
     } yield response
 
     sendButton.setDisable(false)

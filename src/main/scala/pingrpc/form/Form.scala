@@ -3,7 +3,6 @@ package pingrpc.form
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType
 import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor}
 import com.google.protobuf.{Descriptors, Message}
-import io.circe.Json
 import javafx.scene.Node
 import javafx.scene.control.{CheckBox, ComboBox, TextField}
 import pingrpc.proto.EnumValueDescriptorConverter
@@ -13,14 +12,12 @@ import scala.util.chaining.scalaUtilChainingOps
 
 trait Form {
   def toNode: Node
-
-  def toJson: Json
 }
 
 object Form {
 
   def build(descriptor: Descriptor, messageOpt: Option[Message]): Form =
-    FormRoot(descriptor.getFullName, descriptor.getFields.asScala.map(Form.build(_, messageOpt)).toList)
+    FormRoot(descriptor, descriptor.getFields.asScala.map(Form.build(_, messageOpt)).toList)
 
   private def build(fieldDescriptor: FieldDescriptor, messageOpt: Option[Message]): Form = fieldDescriptor.getJavaType match {
     case JavaType.MESSAGE =>

@@ -13,7 +13,7 @@ import javafx.beans.value.{ChangeListener, ObservableValue}
 import javafx.collections.ObservableMap
 import javafx.event.ActionEvent
 import javafx.scene.control._
-import pingrpc.form.Form
+import pingrpc.form.{Form, FormRoot}
 import pingrpc.grpc.{CurlPrinter, FullMessageName, ReflectionManager, Sender}
 import pingrpc.proto.{ProtoUtils, serviceOrdering}
 import pingrpc.storage.StateManager
@@ -136,17 +136,14 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
     val requestTimer = new RequestTimer(responseStatusLabel)
     val sendButton: Button = e.getSource.asInstanceOf[Button]
 
-    val json = tabPane.getSelectionModel.getSelectedItem.getId match {
-      case "form" => formPane.getUserData.asInstanceOf[Form].toJson.asObject.filter(_.nonEmpty).map(_.toJson.toString).getOrElse("")
-      case "json" => requestArea.getText
-      case _ => ""
-    }
+    val message = formPane.getUserData.asInstanceOf[FormRoot].toMessage
+    val json = ProtoUtils.messageToJson(message)
 
     curlArea.setText(CurlPrinter.print(service, method, urlField.getText, json))
     responseHeaders.clear()
     jsonArea.clear()
 
-    val sendTask = new SendTask(json, methodName, urlField.getText, requestTimer, jsonArea, responseHeaders, sender, fileDescriptors, method, sendButton)
+    val sendTask = new SendTask(message, methodName, urlField.getText, requestTimer, jsonArea, responseHeaders, sender, fileDescriptors, method, sendButton)
     new Thread(sendTask).start()
   }
 
@@ -209,7 +206,9 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
               logger.error("Cannot convert json to form", error)
           }
         case "json" =>
-          requestArea.setText(formPane.getUserData.asInstanceOf[Form].toJson.asObject.filter(_.nonEmpty).map(_.toJson.toString).getOrElse(""))
+          val message = formPane.getUserData.asInstanceOf[FormRoot].toMessage
+          val json = ProtoUtils.messageToJson(message)
+          requestArea.setText(json)
         case _ =>
       }
 

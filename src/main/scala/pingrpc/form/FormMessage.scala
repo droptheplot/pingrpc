@@ -1,18 +1,19 @@
 package pingrpc.form
 
-import com.google.protobuf.Descriptors.FieldDescriptor
-import io.circe.Json
+import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor}
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.geometry.Insets
-import javafx.scene.{Cursor, Node}
 import javafx.scene.control.Label
 import javafx.scene.layout._
+import javafx.scene.{Cursor, Node}
 import pingrpc.ui.{boldFont, lightGrayColor}
 
 import scala.jdk.CollectionConverters._
 import scala.util.chaining.scalaUtilChainingOps
 
-case class FormMessage(fieldDescriptor: FieldDescriptor, children: Seq[Form]) extends Form {
+case class FormMessage(fieldDescriptor: FieldDescriptor, children: Seq[Form]) extends Form with FormMessageBuilder {
+  def descriptor: Descriptor = fieldDescriptor.getMessageType
+
   private val isDisabled: SimpleBooleanProperty = new SimpleBooleanProperty(false)
 
   override def toNode: Node = {
@@ -33,21 +34,4 @@ case class FormMessage(fieldDescriptor: FieldDescriptor, children: Seq[Form]) ex
       .tap(_.getChildren.add(label))
       .tap(_.getChildren.add(message))
   }
-
-  override def toJson: Json =
-    if (!isDisabled.get) {
-      Json.obj {
-        fieldDescriptor.getName ->
-          children
-            .foldLeft(Json.obj()) { case (acc, form) => form.toJson.deepMerge(acc) }
-            .asObject
-            .filter(_.nonEmpty)
-            .map { jsonObject =>
-              if (fieldDescriptor.isMapField) flattenJson(jsonObject)
-              else wrapJson(fieldDescriptor, jsonObject.toJson)
-            }
-            .getOrElse(Json.obj())
-            .dropEmptyValues
-      }
-    } else Json.obj()
 }

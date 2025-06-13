@@ -2,9 +2,8 @@ package pingrpc.grpc
 
 import cats.effect.IO
 import com.google.protobuf.util.JsonFormat
-import com.google.protobuf.{Any, Descriptors, DynamicMessage}
+import com.google.protobuf.{Any, Descriptors, DynamicMessage, Message}
 import com.typesafe.scalalogging.StrictLogging
-import pingrpc.proto.ProtoUtils
 import pingrpc.storage.StateManager
 
 import scala.jdk.CollectionConverters._
@@ -15,10 +14,9 @@ class Sender(grpcClient: GrpcClient, stateManager: StateManager) extends StrictL
       responseDescriptor: Descriptors.Descriptor,
       method: String,
       target: String,
-      requestJson: String
+      message: Message
   ): IO[Response[String]] = for {
-    _ <- IO(logger.info(s"Request: $requestJson"))
-    message <- IO.fromEither(ProtoUtils.messageFromJson(requestJson, requestDescriptor))
+    _ <- IO(logger.info(s"Request: $message"))
     _ <- stateManager.update(_.setRequestDescriptor(requestDescriptor.toProto).setRequest(Any.pack(message)))
     request = Request(target, method, message, Map.empty)
     parser = DynamicMessage.getDefaultInstance(responseDescriptor).getParserForType
@@ -27,7 +25,7 @@ class Sender(grpcClient: GrpcClient, stateManager: StateManager) extends StrictL
       _.setResponseDescriptor(responseDescriptor.toProto)
         .setResponse(Any.pack(response.message))
         .putAllResponseHeaders(response.headers.asJava))
+    _ = IO(logger.info(s"Response: ${response.message}"))
     responseJson <- IO(JsonFormat.printer.preservingProtoFieldNames.print(response.message))
-    _ = IO(logger.info(s"Response: $responseJson"))
   } yield response.copy(message = responseJson)
 }
