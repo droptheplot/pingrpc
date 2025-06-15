@@ -3,9 +3,8 @@ package pingrpc.form
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType
 import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor}
 import com.google.protobuf.{Descriptors, Message}
+import javafx.beans.property.{SimpleBooleanProperty, SimpleObjectProperty, SimpleStringProperty}
 import javafx.scene.Node
-import javafx.scene.control.{CheckBox, ComboBox, TextField}
-import pingrpc.proto.EnumValueDescriptorConverter
 
 import scala.jdk.CollectionConverters._
 import scala.util.chaining.scalaUtilChainingOps
@@ -22,7 +21,11 @@ object Form {
   private def build(fieldDescriptor: FieldDescriptor, messageOpt: Option[Message]): Form = fieldDescriptor.getJavaType match {
     case JavaType.MESSAGE =>
       val nestedMessageOpt: Option[Message] = messageOpt.flatMap { message =>
-        Option(message.getField(fieldDescriptor)).collect { case message: Message => message }
+        Option(message.getField(fieldDescriptor))
+          .collect {
+            case message: Message => message
+            case v: java.util.List[Message] if v.size > 0 => v.getFirst
+          }
       }
 
       FormMessage(fieldDescriptor, fieldDescriptor.getMessageType.getFields.asScala.map(Form.build(_, nestedMessageOpt)).toList)
@@ -34,65 +37,24 @@ object Form {
           case v => v
         }
 
-      val node = fieldDescriptor.getJavaType match {
-        case JavaType.STRING | JavaType.BYTE_STRING =>
-          new TextField()
-            .tap(_.setPromptText(fieldDescriptor.getType.toString.toLowerCase))
-            .tap { textField =>
-              valueOpt
-                .flatMap(value => Option(value).collect { case v: String if v.nonEmpty => v })
-                .map(value => textField.setText(value))
-            }
-        case JavaType.INT | JavaType.LONG =>
-          new TextField()
-            .tap(_.setPromptText(fieldDescriptor.getType.toString.toLowerCase))
-            .tap { textField =>
-              valueOpt
-                .flatMap(value =>
-                  Option(value)
-                    .collect {
-                      case v: Long => v
-                      case v: Int => v.toLong
-                    }
-                    .filter(_ > 0)
-                )
-                .map(value => textField.setText(value.toString))
-            }
-        case JavaType.DOUBLE | JavaType.FLOAT =>
-          new TextField()
-            .tap(_.setPromptText(fieldDescriptor.getType.toString.toLowerCase))
-            .tap { textField =>
-              valueOpt
-                .flatMap(value =>
-                  Option(value)
-                    .collect {
-                      case v: Double => v
-                      case v: Float => v.toDouble
-                    }
-                    .filter(_ > 0.0)
-                )
-                .map(value => textField.setText(value.toString))
-            }
+      val property = fieldDescriptor.getJavaType match {
+        case JavaType.STRING | JavaType.BYTE_STRING | JavaType.INT | JavaType.LONG | JavaType.FLOAT | JavaType.DOUBLE =>
+          new SimpleStringProperty()
+            .tap(property => valueOpt.flatMap(value => Option(value).collect(anyToString(_))).foreach(property.set))
         case JavaType.BOOLEAN =>
-          new CheckBox(fieldDescriptor.getName)
-            .tap(_.setMnemonicParsing(false))
-            .tap { checkBox =>
-              valueOpt
-                .flatMap(value => Option(value).collect { case v: Boolean => v })
-                .map(value => checkBox.setSelected(value))
-            }
+          new SimpleBooleanProperty()
+            .tap(property => valueOpt.flatMap(value => Option(value).collect { case v: Boolean if v => v }).foreach(property.set))
         case JavaType.ENUM =>
-          new ComboBox[Descriptors.EnumValueDescriptor]
-            .tap(_.setConverter(new EnumValueDescriptorConverter))
-            .tap(_.getItems.addAll(fieldDescriptor.getEnumType.getValues))
-            .tap(_.getSelectionModel.select(0))
-            .tap { comboBox =>
-              valueOpt
-                .flatMap(value => Option(value).collect { case v: Descriptors.EnumValueDescriptor => v })
-                .map(value => comboBox.getSelectionModel.select(value))
-            }
+          new SimpleObjectProperty[Descriptors.EnumValueDescriptor](fieldDescriptor.getEnumType.getValues.getFirst)
+            .tap(property => valueOpt.flatMap(value => Option(value).collect { case v: Descriptors.EnumValueDescriptor => v }).foreach(property.set))
       }
 
-      FormField(fieldDescriptor, node)
+      FormField(fieldDescriptor, property)
+  }
+
+  private def anyToString(any: Any): String = any match {
+    case s: String => s
+    case n: java.lang.Number => n.toString
+    case _ => ""
   }
 }
