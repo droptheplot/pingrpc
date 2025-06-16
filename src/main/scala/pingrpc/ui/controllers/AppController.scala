@@ -5,7 +5,7 @@ import cats.effect.unsafe.implicits.global
 import com.google.protobuf.DescriptorProtos.{FileDescriptorProto, MethodDescriptorProto}
 import com.google.protobuf.Descriptors.FileDescriptor
 import com.google.protobuf.util.JsonFormat
-import com.google.protobuf.{DescriptorProtos, Descriptors, DynamicMessage}
+import com.google.protobuf.{DescriptorProtos, Descriptors, DynamicMessage, Message}
 import com.typesafe.scalalogging.StrictLogging
 import io.grpc.reflection.v1.ServiceResponse
 import io.grpc.{Status, StatusException}
@@ -136,15 +136,28 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
     val requestTimer = new RequestTimer(responseStatusLabel)
     val sendButton: Button = e.getSource.asInstanceOf[Button]
 
-    val message = formPane.getUserData.asInstanceOf[FormRoot].toMessage
-    val json = ProtoUtils.messageToJson(message)
-
-    curlArea.setText(CurlPrinter.print(service, method, urlField.getText, json))
+    curlArea.clear()
     responseHeaders.clear()
     jsonArea.clear()
 
-    val sendTask = new SendTask(message, methodName, urlField.getText, requestTimer, jsonArea, responseHeaders, sender, fileDescriptors, method, sendButton)
-    new Thread(sendTask).start()
+    (tabPane.getSelectionModel.getSelectedItem.getId match {
+      case "form" =>
+        val message = formPane.getUserData.asInstanceOf[FormRoot].toMessage
+        Right((message, ProtoUtils.messageToJson(message)))
+      case "json" =>
+        for {
+          descriptor <- findMessageDescriptor(fileDescriptors, methodsBox.getSelectionModel.getSelectedItem.getInputType)
+          message <- ProtoUtils.messageFromJson(requestArea.getText, descriptor)
+        } yield (message, requestArea.getText)
+    }) match {
+      case Right((message, json)) =>
+        curlArea.setText(CurlPrinter.print(service, method, urlField.getText, json))
+
+        val sendTask = new SendTask(message, methodName, urlField.getText, requestTimer, jsonArea, responseHeaders, sender, fileDescriptors, method, sendButton)
+        new Thread(sendTask).start()
+      case Left(e) =>
+        new AlertView("Cannot parse json", e.getMessage).showAndWait
+    }
   }
 
   def applyState(
