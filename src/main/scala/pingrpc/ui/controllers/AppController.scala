@@ -94,6 +94,7 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
       .flatTap(services => stateManager.update(_.setUrl(urlField.getText).clearServices.addAllServices(services.asJava)))
       .attempt
       .unsafeRunSync
+      .map(_.sorted[Service](serviceOrdering))
       .left
       .map { error =>
         methodsBox.setDisable(true)
@@ -228,7 +229,7 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
   private def fillServices(services: List[Service], selectedService: Service, servicesBox: ComboBox[Service]): Unit =
     if (services.nonEmpty) {
       servicesBox.getItems.clear()
-      services.sorted[Service](serviceOrdering).foreach(servicesBox.getItems.add)
+      services.foreach(servicesBox.getItems.add)
       servicesBox.setDisable(false)
       servicesBox.getSelectionModel.select(selectedService)
     }
