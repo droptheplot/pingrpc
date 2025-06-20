@@ -2,8 +2,9 @@ package pingrpc.ui.views
 
 import javafx.geometry.Insets
 import javafx.scene.control._
-import javafx.scene.layout.{Priority, VBox}
-import pingrpc.ui.{boldFont, grayColor, monospacedFont}
+import javafx.scene.layout._
+import org.fxmisc.richtext.CodeArea
+import pingrpc.ui._
 
 import scala.util.chaining.scalaUtilChainingOps
 
@@ -11,10 +12,13 @@ class ResponseView extends VBox {
   val responseMessageLabel: Label = new Label("...")
     .tap(_.setTextFill(grayColor))
 
-  val jsonArea: TextArea = new TextArea()
+  val jsonArea: CodeArea = new CodeArea()
     .tap(_.setEditable(false))
     .tap(_.setWrapText(true))
-    .tap(_.setFont(monospacedFont))
+    .tap(_.textProperty.addListener((_, _, _) => JsonHighlighter.highlight(jsonArea)))
+    .tap(_.setBorder(areaBorder))
+    .tap(_.setPadding(areaInsets))
+    .tap(_.setBackground(areaBackground))
   VBox.setVgrow(jsonArea, Priority.ALWAYS)
 
   val metadataView: MetadataView = new MetadataView()
@@ -25,10 +29,12 @@ class ResponseView extends VBox {
 
   metadataView.prefWidthProperty.bind(responseMetadataPane.widthProperty)
 
-  val curlArea: TextArea = new TextArea()
+  val curlArea: CodeArea = new CodeArea()
     .tap(_.setEditable(false))
     .tap(_.setWrapText(true))
-    .tap(_.setFont(monospacedFont))
+    .tap(_.setBorder(areaBorder))
+    .tap(_.setPadding(areaInsets))
+    .tap(_.setBackground(areaBackground))
     .tap(_.setPrefHeight(80))
 
   val responseStatusLabel = new Label("...")

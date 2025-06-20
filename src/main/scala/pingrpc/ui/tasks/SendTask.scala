@@ -9,6 +9,7 @@ import javafx.application.Platform
 import javafx.collections.ObservableMap
 import javafx.concurrent.Task
 import javafx.scene.control.{Button, TextArea}
+import org.fxmisc.richtext.CodeArea
 import pingrpc.grpc.{FullMessageName, Sender}
 import pingrpc.proto.ProtoUtils
 import pingrpc.ui.views.AlertView
@@ -21,7 +22,7 @@ class SendTask(
     methodName: String,
     url: String,
     timer: AnimationTimer,
-    jsonArea: TextArea,
+    jsonArea: CodeArea,
     responseHeaders: ObservableMap[String, String],
     sender: Sender,
     fileDescriptors: List[FileDescriptor],
@@ -43,8 +44,10 @@ class SendTask(
 
     responseOpt match {
       case Right(response) =>
-        responseHeaders.putAll(response.headers.asJava)
-        jsonArea.setText(response.message)
+        Platform.runLater(() => {
+          responseHeaders.putAll(response.headers.asJava)
+          jsonArea.replaceText(response.message)
+        })
       case Left(error: StatusException) =>
         Platform.runLater(() => new AlertView("Server responded with an error", error.getMessage).showAndWait)
       case Left(error: InvalidProtocolBufferException) =>

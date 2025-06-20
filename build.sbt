@@ -12,6 +12,8 @@ libraryDependencies += "org.openjfx" % "javafx-controls" % "23.0.2"
 
 libraryDependencies += "io.github.mkpaz" % "atlantafx-base" % "2.0.1"
 
+libraryDependencies += "org.fxmisc.richtext" % "richtextfx" % "0.11.5"
+
 libraryDependencies += "io.grpc" % "grpc-core" % "1.71.0"
 libraryDependencies += "io.grpc" % "grpc-netty-shaded" % "1.71.0"
 libraryDependencies += "io.grpc" % "grpc-protobuf" % "1.71.0"

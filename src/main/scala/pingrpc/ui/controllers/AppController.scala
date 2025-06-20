@@ -13,6 +13,8 @@ import javafx.beans.value.{ChangeListener, ObservableValue}
 import javafx.collections.ObservableMap
 import javafx.event.ActionEvent
 import javafx.scene.control._
+import org.fxmisc.flowless.VirtualizedScrollPane
+import org.fxmisc.richtext.{CodeArea, StyleClassedTextArea}
 import pingrpc.form.{Form, FormRoot}
 import pingrpc.grpc.{CurlPrinter, FullMessageName, ReflectionManager, Sender}
 import pingrpc.proto.{ProtoUtils, serviceOrdering}
@@ -124,9 +126,9 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
       methodsBox: ComboBox[Method],
       formPane: ScrollPane,
       tabPane: TabPane,
-      requestArea: TextArea,
-      curlArea: TextArea,
-      jsonArea: TextArea,
+      requestArea: StyleClassedTextArea,
+      curlArea: CodeArea,
+      jsonArea: CodeArea,
       responseHeaders: ObservableMap[String, String],
       responseStatusLabel: Label
   )(e: ActionEvent): Unit = {
@@ -152,7 +154,7 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
         } yield (message, requestArea.getText)
     }) match {
       case Right((message, json)) =>
-        curlArea.setText(CurlPrinter.print(service, method, urlField.getText, json))
+        curlArea.replaceText(CurlPrinter.print(service, method, urlField.getText, json))
 
         val sendTask = new SendTask(message, methodName, urlField.getText, requestTimer, jsonArea, responseHeaders, sender, fileDescriptors, method, sendButton)
         new Thread(sendTask).start()
@@ -167,7 +169,7 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
       methodsBox: ComboBox[Method],
       headers: ObservableMap[String, String],
       formPane: ScrollPane,
-      responseArea: TextArea,
+      responseArea: CodeArea,
       sendButton: Button,
       responseMessageLabel: Label
   ): Unit =
@@ -198,11 +200,11 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
         sendButton.setDisable(false)
         responseMessageLabel.setText(responseDescriptor.getFullName)
         headers.putAll(state.getResponseHeadersMap)
-        responseOpt.foreach(responseArea.setText)
+        responseOpt.foreach(responseArea.replaceText)
       }
     }
 
-  def requestTabsListener(requestArea: TextArea, formPane: ScrollPane, methodsBox: ComboBox[Method]): ChangeListener[Tab] =
+  def requestTabsListener(requestArea: StyleClassedTextArea, formPane: ScrollPane, methodsBox: ComboBox[Method]): ChangeListener[Tab] =
     (_: ObservableValue[_ <: Tab], _: Tab, tab: Tab) =>
       tab.getId match {
         case "form" if stateManager.currentState.getRequestDescriptor.hasName =>
@@ -222,7 +224,7 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
         case "json" =>
           val message = formPane.getUserData.asInstanceOf[FormRoot].toMessage
           val json = ProtoUtils.messageToJson(message)
-          requestArea.setText(json)
+          requestArea.replaceText(json)
         case _ =>
       }
 

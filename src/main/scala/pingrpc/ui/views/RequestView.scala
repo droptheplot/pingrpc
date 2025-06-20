@@ -3,8 +3,9 @@ package pingrpc.ui.views
 import javafx.geometry.Insets
 import javafx.scene.control._
 import javafx.scene.layout.{HBox, Pane, Priority, VBox}
+import org.fxmisc.richtext.CodeArea
 import pingrpc.proto.{MethodConverter, ServiceConverter}
-import pingrpc.ui.{boldFont, grayColor, monospacedFont}
+import pingrpc.ui._
 import protobuf.MethodOuterClass.Method
 import protobuf.ServiceOuterClass.Service
 
@@ -15,9 +16,12 @@ class RequestView extends VBox {
     .tap(_.setText("localhost:8080"))
   HBox.setHgrow(urlField, Priority.ALWAYS)
 
-  lazy val jsonArea: TextArea = new TextArea()
+  val jsonArea: CodeArea = new CodeArea()
     .tap(_.setWrapText(true))
-    .tap(_.setFont(monospacedFont))
+    .tap(_.textProperty.addListener((_, _, _) => JsonHighlighter.highlight(jsonArea)))
+    .tap(_.setBorder(areaBorder))
+    .tap(_.setPadding(areaInsets))
+    .tap(_.setBackground(areaBackground))
   VBox.setVgrow(jsonArea, Priority.ALWAYS)
 
   val syncButton: Button = new Button("Sync")
