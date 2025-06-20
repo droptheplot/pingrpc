@@ -31,9 +31,14 @@ object Form {
       FormMessage(fieldDescriptor, fieldDescriptor.getMessageType.getFields.asScala.map(Form.build(_, nestedMessageOpt)).toList)
     case _ =>
       val valueOpt: Option[Any] = messageOpt
-        .map(message => message.getField(fieldDescriptor))
+        .map(message => message.getField(fieldDescriptor).asInstanceOf[Any])
         .map {
           case v: java.util.List[_] if v.size > 0 => v.getFirst
+          case v: Long if v == 0 => None
+          case v: Int if v == 0 => None
+          case v: Float if v == 0 => None
+          case v: Double if v == 0 => None
+          case v: String if v.isEmpty => None
           case v => v
         }
 
