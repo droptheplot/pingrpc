@@ -19,9 +19,8 @@ trait FormMessageBuilder {
     children.foreach {
       case formField: FormField[_] =>
         formField.toValue.foreach { value =>
-          val v = wrapRepeated(formField.fieldDescriptor, value)
-
-          messageBuilder.setField(formField.fieldDescriptor, v)
+          if (formField.fieldDescriptor.isRepeated) messageBuilder.addRepeatedField(formField.fieldDescriptor, value)
+          else messageBuilder.setField(formField.fieldDescriptor, value)
         }
       case formMessage: FormMessage =>
         val message = formMessage.toMessage

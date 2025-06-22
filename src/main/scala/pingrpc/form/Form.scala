@@ -7,7 +7,7 @@ import javafx.beans.property._
 import javafx.scene.Node
 
 import scala.jdk.CollectionConverters._
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 trait Form {
   def toNode: Node
@@ -33,60 +33,47 @@ object Form {
       fieldDescriptor.getJavaType match {
         case JavaType.STRING =>
           val property = new SimpleStringProperty()
-
-          messageOpt.foreach { message =>
-            Try(message.getField(fieldDescriptor).asInstanceOf[String]).foreach(property.setValue)
-          }
+          messageOpt.flatMap(getValue[String](_, fieldDescriptor)).foreach(property.setValue)
 
           FormField.StringField(fieldDescriptor, property)
         case JavaType.BOOLEAN =>
           val property = new SimpleBooleanProperty()
-
-          messageOpt.foreach { message =>
-            Try(message.getField(fieldDescriptor).asInstanceOf[java.lang.Boolean]).foreach(property.setValue)
-          }
+          messageOpt.flatMap(getValue[java.lang.Boolean](_, fieldDescriptor)).foreach(property.setValue)
 
           FormField.BooleanField(fieldDescriptor, property)
         case JavaType.ENUM =>
           val property = new SimpleObjectProperty[Descriptors.EnumValueDescriptor](fieldDescriptor.getEnumType.getValues.getFirst)
 
-          messageOpt.foreach { message =>
-            Try(message.getField(fieldDescriptor).asInstanceOf[Descriptors.EnumValueDescriptor]).foreach(property.setValue)
-          }
-
           FormField.EnumField(fieldDescriptor, property)
         case JavaType.INT =>
           val property = new SimpleIntegerProperty()
-
-          messageOpt.foreach { message =>
-            Try(message.getField(fieldDescriptor).asInstanceOf[java.lang.Integer]).foreach(property.setValue)
-          }
+          messageOpt.flatMap(getValue[java.lang.Integer](_, fieldDescriptor)).foreach(property.setValue)
 
           FormField.IntField(fieldDescriptor, property)
         case JavaType.LONG =>
           val property = new SimpleLongProperty()
-
-          messageOpt.foreach { message =>
-            Try(message.getField(fieldDescriptor).asInstanceOf[java.lang.Long]).foreach(property.setValue)
-          }
+          messageOpt.flatMap(getValue[java.lang.Long](_, fieldDescriptor)).foreach(property.setValue)
 
           FormField.LongField(fieldDescriptor, property)
         case JavaType.FLOAT =>
           val property = new SimpleFloatProperty()
 
-          messageOpt.foreach { message =>
-            Try(message.getField(fieldDescriptor).asInstanceOf[java.lang.Float]).foreach(property.setValue)
-          }
+          messageOpt.flatMap(getValue[java.lang.Float](_, fieldDescriptor)).foreach(property.setValue)
 
           FormField.FloatField(fieldDescriptor, property)
         case JavaType.DOUBLE =>
           val property = new SimpleDoubleProperty()
-
-          messageOpt.foreach { message =>
-            Try(message.getField(fieldDescriptor).asInstanceOf[java.lang.Double]).foreach(property.setValue)
-          }
+          messageOpt.flatMap(getValue[java.lang.Double](_, fieldDescriptor)).foreach(property.setValue)
 
           FormField.DoubleField(fieldDescriptor, property)
       }
   }
+
+  private def getValue[T](message: Message, fieldDescriptor: FieldDescriptor): Option[T] =
+    message.getField(fieldDescriptor) match {
+      case values: java.util.List[T] if values.size > 0 => Option(values.getFirst)
+      case values: java.util.List[T] if values.isEmpty => None
+      case value: T if value.isInstanceOf[T] => Option(value)
+      case _ => None
+    }
 }
