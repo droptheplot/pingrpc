@@ -16,4 +16,6 @@ package object ui {
   val areaBackground: Background = new Background(new BackgroundFill(veryLightGrayColor, CornerRadii.EMPTY, Insets.EMPTY))
   val areaBorder = new Border(new BorderStroke(lightGrayColor, BorderStrokeStyle.SOLID, new CornerRadii(3), new BorderWidths(1)))
   val areaInsets = new Insets(5, 7, 5, 7)
+
+  val areaFont = "-fx-font-family: monospace; -fx-font-size: 10pt;"
 }

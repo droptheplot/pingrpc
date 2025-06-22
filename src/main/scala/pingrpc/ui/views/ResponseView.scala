@@ -19,6 +19,7 @@ class ResponseView extends VBox {
     .tap(_.setBorder(areaBorder))
     .tap(_.setPadding(areaInsets))
     .tap(_.setBackground(areaBackground))
+    .tap(_.setStyle(areaFont))
   VBox.setVgrow(jsonArea, Priority.ALWAYS)
 
   val metadataView: MetadataView = new MetadataView()
@@ -35,6 +36,7 @@ class ResponseView extends VBox {
     .tap(_.setBorder(areaBorder))
     .tap(_.setPadding(areaInsets))
     .tap(_.setBackground(areaBackground))
+    .tap(_.setStyle(areaFont))
     .tap(_.setPrefHeight(80))
 
   val responseStatusLabel = new Label("...")

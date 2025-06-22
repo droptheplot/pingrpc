@@ -22,6 +22,7 @@ class RequestView extends VBox {
     .tap(_.setBorder(areaBorder))
     .tap(_.setPadding(areaInsets))
     .tap(_.setBackground(areaBackground))
+    .tap(_.setStyle(areaFont))
   VBox.setVgrow(jsonArea, Priority.ALWAYS)
 
   val syncButton: Button = new Button("Sync")
