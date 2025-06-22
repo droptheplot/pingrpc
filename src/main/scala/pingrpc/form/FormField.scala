@@ -10,6 +10,7 @@ import javafx.scene.layout.HBox
 import javafx.util.converter.NumberStringConverter
 import pingrpc.proto.EnumValueDescriptorConverter
 
+import java.text.NumberFormat
 import scala.util.chaining.scalaUtilChainingOps
 
 trait FormField[T] extends Form {
@@ -30,6 +31,10 @@ trait FormField[T] extends Form {
   private val label: Label = new Label(fieldDescriptor.getName)
     .tap(_.setCursor(Cursor.HAND))
     .tap(_.setOnMouseClicked { _ => isDisabled.set(!isDisabled.get) })
+
+  private val numberFormat = NumberFormat.getNumberInstance.tap(_.setGroupingUsed(false))
+
+  val numberStringConverter = new NumberStringConverter(numberFormat)
 }
 
 object FormField {
@@ -50,7 +55,7 @@ object FormField {
     override def toNode: Node = {
       val textField = new TextField()
         .tap(_.setPromptText(fieldDescriptor.getType.toString.toLowerCase))
-        .tap(_.textProperty.bindBidirectional(property, new NumberStringConverter))
+        .tap(_.textProperty.bindBidirectional(property, numberStringConverter))
         .tap(_.disableProperty.bindBidirectional(isDisabled))
 
       fieldContainer(textField)
@@ -61,7 +66,7 @@ object FormField {
     override def toNode: Node = {
       val textField = new TextField()
         .tap(_.setPromptText(fieldDescriptor.getType.toString.toLowerCase))
-        .tap(_.textProperty.bindBidirectional(property, new NumberStringConverter))
+        .tap(_.textProperty.bindBidirectional(property, numberStringConverter))
         .tap(_.disableProperty.bindBidirectional(isDisabled))
 
       fieldContainer(textField)
@@ -72,7 +77,7 @@ object FormField {
     override def toNode: Node = {
       val textField = new TextField()
         .tap(_.setPromptText(fieldDescriptor.getType.toString.toLowerCase))
-        .tap(_.textProperty.bindBidirectional(property, new NumberStringConverter))
+        .tap(_.textProperty.bindBidirectional(property, numberStringConverter))
         .tap(_.disableProperty.bindBidirectional(isDisabled))
 
       fieldContainer(textField)
@@ -83,7 +88,7 @@ object FormField {
     override def toNode: Node = {
       val textField = new TextField()
         .tap(_.setPromptText(fieldDescriptor.getType.toString.toLowerCase))
-        .tap(_.textProperty.bindBidirectional(property, new NumberStringConverter))
+        .tap(_.textProperty.bindBidirectional(property, numberStringConverter))
         .tap(_.disableProperty.bindBidirectional(isDisabled))
 
       fieldContainer(textField)
