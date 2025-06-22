@@ -1,10 +1,8 @@
 package pingrpc.form
 
-import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor}
+import com.google.protobuf.Descriptors.Descriptor
 import com.google.protobuf.{DynamicMessage, Message}
 import javafx.beans.property.SimpleBooleanProperty
-
-import scala.jdk.CollectionConverters._
 
 trait FormMessageBuilder {
   def descriptor: Descriptor
@@ -25,14 +23,13 @@ trait FormMessageBuilder {
       case formMessage: FormMessage =>
         val message = formMessage.toMessage
 
-        if (message != message.getDefaultInstanceForType && !formMessage.isDisabled.getValue)
-          messageBuilder.setField(formMessage.fieldDescriptor, wrapRepeated(formMessage.fieldDescriptor, message))
+        if (message != message.getDefaultInstanceForType && !formMessage.isDisabled.getValue) {
+          if (formMessage.fieldDescriptor.isRepeated) messageBuilder.addRepeatedField(formMessage.fieldDescriptor, message)
+          else messageBuilder.setField(formMessage.fieldDescriptor, message)
+        }
       case _ =>
     }
 
     messageBuilder.build
   }
-
-  private def wrapRepeated(fieldDescriptor: FieldDescriptor, value: Any): Any =
-    if (fieldDescriptor.isRepeated) List(value).asJava else value
 }

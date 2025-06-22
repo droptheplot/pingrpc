@@ -21,7 +21,13 @@ trait FormField[T] extends Form {
 
   def toValue: Option[T] = Option(property.getValue).filterNot(_ => isDisabled.get)
 
-  val label: Label = new Label(fieldDescriptor.getName)
+  def fieldContainer(node: Node): HBox = new HBox()
+    .tap(_.setSpacing(10))
+    .tap(_.setAlignment(Pos.CENTER_LEFT))
+    .tap(_.getChildren.add(label))
+    .tap(_.getChildren.add(node))
+
+  private val label: Label = new Label(fieldDescriptor.getName)
     .tap(_.setCursor(Cursor.HAND))
     .tap(_.setOnMouseClicked { _ => isDisabled.set(!isDisabled.get) })
 }
@@ -34,11 +40,7 @@ object FormField {
         .tap(_.textProperty.bindBidirectional(property))
         .tap(_.disableProperty.bindBidirectional(isDisabled))
 
-      new HBox()
-        .tap(_.setSpacing(10))
-        .tap(_.setAlignment(Pos.CENTER_LEFT))
-        .tap(_.getChildren.add(label))
-        .tap(_.getChildren.add(textField))
+      fieldContainer(textField)
     }
 
     override def toValue: Option[String] = super.toValue.filter(_.nonEmpty)
@@ -51,11 +53,7 @@ object FormField {
         .tap(_.textProperty.bindBidirectional(property, new NumberStringConverter))
         .tap(_.disableProperty.bindBidirectional(isDisabled))
 
-      new HBox()
-        .tap(_.setSpacing(10))
-        .tap(_.setAlignment(Pos.CENTER_LEFT))
-        .tap(_.getChildren.add(label))
-        .tap(_.getChildren.add(textField))
+      fieldContainer(textField)
     }
   }
 
@@ -66,11 +64,7 @@ object FormField {
         .tap(_.textProperty.bindBidirectional(property, new NumberStringConverter))
         .tap(_.disableProperty.bindBidirectional(isDisabled))
 
-      new HBox()
-        .tap(_.setSpacing(10))
-        .tap(_.setAlignment(Pos.CENTER_LEFT))
-        .tap(_.getChildren.add(label))
-        .tap(_.getChildren.add(textField))
+      fieldContainer(textField)
     }
   }
 
@@ -81,11 +75,7 @@ object FormField {
         .tap(_.textProperty.bindBidirectional(property, new NumberStringConverter))
         .tap(_.disableProperty.bindBidirectional(isDisabled))
 
-      new HBox()
-        .tap(_.setSpacing(10))
-        .tap(_.setAlignment(Pos.CENTER_LEFT))
-        .tap(_.getChildren.add(label))
-        .tap(_.getChildren.add(textField))
+      fieldContainer(textField)
     }
   }
 
@@ -96,11 +86,7 @@ object FormField {
         .tap(_.textProperty.bindBidirectional(property, new NumberStringConverter))
         .tap(_.disableProperty.bindBidirectional(isDisabled))
 
-      new HBox()
-        .tap(_.setSpacing(10))
-        .tap(_.setAlignment(Pos.CENTER_LEFT))
-        .tap(_.getChildren.add(label))
-        .tap(_.getChildren.add(textField))
+      fieldContainer(textField)
     }
   }
 
@@ -119,11 +105,7 @@ object FormField {
         .tap(_.valueProperty.bindBidirectional(property))
         .tap(_.disableProperty.bindBidirectional(isDisabled))
 
-      new HBox()
-        .tap(_.setSpacing(10))
-        .tap(_.setAlignment(Pos.CENTER_LEFT))
-        .tap(_.getChildren.add(label))
-        .tap(_.getChildren.add(comboBox))
+      fieldContainer(comboBox)
     }
   }
 }

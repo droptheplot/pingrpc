@@ -7,7 +7,6 @@ import javafx.beans.property._
 import javafx.scene.Node
 
 import scala.jdk.CollectionConverters._
-import scala.util.{Failure, Success, Try}
 
 trait Form {
   def toNode: Node
