@@ -3,11 +3,11 @@ package pingrpc.form
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType
 import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor}
 import com.google.protobuf.{Descriptors, Message}
-import javafx.beans.property.{SimpleBooleanProperty, SimpleObjectProperty, SimpleStringProperty}
+import javafx.beans.property._
 import javafx.scene.Node
 
 import scala.jdk.CollectionConverters._
-import scala.util.chaining.scalaUtilChainingOps
+import scala.util.Try
 
 trait Form {
   def toNode: Node
@@ -30,36 +30,63 @@ object Form {
 
       FormMessage(fieldDescriptor, fieldDescriptor.getMessageType.getFields.asScala.map(Form.build(_, nestedMessageOpt)).toList)
     case _ =>
-      val valueOpt: Option[Any] = messageOpt
-        .map(message => message.getField(fieldDescriptor).asInstanceOf[Any])
-        .map {
-          case v: java.util.List[_] if v.size > 0 => v.getFirst
-          case v: Long if v == 0 => None
-          case v: Int if v == 0 => None
-          case v: Float if v == 0 => None
-          case v: Double if v == 0 => None
-          case v: String if v.isEmpty => None
-          case v => v
-        }
+      fieldDescriptor.getJavaType match {
+        case JavaType.STRING =>
+          val property = new SimpleStringProperty()
 
-      val property = fieldDescriptor.getJavaType match {
-        case JavaType.STRING | JavaType.BYTE_STRING | JavaType.INT | JavaType.LONG | JavaType.FLOAT | JavaType.DOUBLE =>
-          new SimpleStringProperty()
-            .tap(property => valueOpt.flatMap(value => Option(value).collect(anyToString(_))).foreach(property.set))
+          messageOpt.foreach { message =>
+            Try(message.getField(fieldDescriptor).asInstanceOf[String]).foreach(property.setValue)
+          }
+
+          FormField.StringField(fieldDescriptor, property)
         case JavaType.BOOLEAN =>
-          new SimpleBooleanProperty()
-            .tap(property => valueOpt.flatMap(value => Option(value).collect { case v: Boolean if v => v }).foreach(property.set))
+          val property = new SimpleBooleanProperty()
+
+          messageOpt.foreach { message =>
+            Try(message.getField(fieldDescriptor).asInstanceOf[java.lang.Boolean]).foreach(property.setValue)
+          }
+
+          FormField.BooleanField(fieldDescriptor, property)
         case JavaType.ENUM =>
-          new SimpleObjectProperty[Descriptors.EnumValueDescriptor](fieldDescriptor.getEnumType.getValues.getFirst)
-            .tap(property => valueOpt.flatMap(value => Option(value).collect { case v: Descriptors.EnumValueDescriptor => v }).foreach(property.set))
+          val property = new SimpleObjectProperty[Descriptors.EnumValueDescriptor](fieldDescriptor.getEnumType.getValues.getFirst)
+
+          messageOpt.foreach { message =>
+            Try(message.getField(fieldDescriptor).asInstanceOf[Descriptors.EnumValueDescriptor]).foreach(property.setValue)
+          }
+
+          FormField.EnumField(fieldDescriptor, property)
+        case JavaType.INT =>
+          val property = new SimpleIntegerProperty()
+
+          messageOpt.foreach { message =>
+            Try(message.getField(fieldDescriptor).asInstanceOf[java.lang.Integer]).foreach(property.setValue)
+          }
+
+          FormField.IntField(fieldDescriptor, property)
+        case JavaType.LONG =>
+          val property = new SimpleLongProperty()
+
+          messageOpt.foreach { message =>
+            Try(message.getField(fieldDescriptor).asInstanceOf[java.lang.Long]).foreach(property.setValue)
+          }
+
+          FormField.LongField(fieldDescriptor, property)
+        case JavaType.FLOAT =>
+          val property = new SimpleFloatProperty()
+
+          messageOpt.foreach { message =>
+            Try(message.getField(fieldDescriptor).asInstanceOf[java.lang.Float]).foreach(property.setValue)
+          }
+
+          FormField.FloatField(fieldDescriptor, property)
+        case JavaType.DOUBLE =>
+          val property = new SimpleDoubleProperty()
+
+          messageOpt.foreach { message =>
+            Try(message.getField(fieldDescriptor).asInstanceOf[java.lang.Double]).foreach(property.setValue)
+          }
+
+          FormField.DoubleField(fieldDescriptor, property)
       }
-
-      FormField(fieldDescriptor, property)
-  }
-
-  private def anyToString(any: Any): String = any match {
-    case s: String => s
-    case n: java.lang.Number => n.toString
-    case _ => ""
   }
 }

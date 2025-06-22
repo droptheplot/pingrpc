@@ -14,7 +14,7 @@ import scala.util.chaining.scalaUtilChainingOps
 case class FormMessage(fieldDescriptor: FieldDescriptor, children: Seq[Form]) extends Form with FormMessageBuilder {
   def descriptor: Descriptor = fieldDescriptor.getMessageType
 
-  private val isDisabled: SimpleBooleanProperty = new SimpleBooleanProperty(false)
+  val isDisabled: SimpleBooleanProperty = new SimpleBooleanProperty(false)
 
   override def toNode: Node = {
     val message = new VBox()

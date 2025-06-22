@@ -1,6 +1,7 @@
 package pingrpc.form
 
 import com.google.protobuf.Descriptors.Descriptor
+import javafx.beans.property.SimpleBooleanProperty
 import javafx.geometry.Insets
 import javafx.scene.Node
 import javafx.scene.control.Label
@@ -11,6 +12,7 @@ import scala.jdk.CollectionConverters._
 import scala.util.chaining.scalaUtilChainingOps
 
 case class FormRoot(descriptor: Descriptor, children: Seq[Form]) extends Form with FormMessageBuilder {
+  override def isDisabled: SimpleBooleanProperty = new SimpleBooleanProperty(false)
 
   override def toNode: Node =
     new VBox()
