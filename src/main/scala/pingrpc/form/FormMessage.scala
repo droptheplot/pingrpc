@@ -2,11 +2,10 @@ package pingrpc.form
 
 import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor}
 import javafx.beans.property.SimpleBooleanProperty
-import javafx.geometry.Insets
 import javafx.scene.control.Label
 import javafx.scene.layout._
 import javafx.scene.{Cursor, Node}
-import pingrpc.ui.{boldFont, lightGrayColor}
+import pingrpc.ui.boldFont
 
 import scala.jdk.CollectionConverters._
 import scala.util.chaining.scalaUtilChainingOps
@@ -19,8 +18,7 @@ case class FormMessage(fieldDescriptor: FieldDescriptor, children: Seq[Form]) ex
   override def toNode: Node = {
     val message = new VBox()
       .tap(_.setSpacing(10))
-      .tap(_.setPadding(new Insets(0, 0, 0, 10)))
-      .tap(_.setBorder(new Border(new BorderStroke(lightGrayColor, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(0, 0, 0, 2)))))
+      .tap(_.getStyleClass.add("form-message"))
       .tap(_.getChildren.add(new Label(fieldDescriptor.getMessageType.getFullName).tap(_.setFont(boldFont))))
       .tap(_.getChildren.addAll(children.map(_.toNode).asJava))
       .tap(_.disableProperty.bindBidirectional(isDisabled))

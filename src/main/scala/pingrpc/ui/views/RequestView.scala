@@ -19,10 +19,6 @@ class RequestView extends VBox {
   val jsonArea: CodeArea = new CodeArea()
     .tap(_.setWrapText(true))
     .tap(_.textProperty.addListener((_, _, _) => JsonHighlighter.highlight(jsonArea)))
-    .tap(_.setBorder(areaBorder))
-    .tap(_.setPadding(areaInsets))
-    .tap(_.setBackground(areaBackground))
-    .tap(_.setStyle(areaFont))
   VBox.setVgrow(jsonArea, Priority.ALWAYS)
 
   val syncButton: Button = new Button("Sync")
@@ -53,7 +49,7 @@ class RequestView extends VBox {
 
   private val requestLabel = new Label("REQUEST")
     .tap(_.setFont(boldFont))
-    .tap(_.setTextFill(grayColor))
+    .tap(_.getStyleClass.add("text-muted"))
 
   private lazy val sendPane: Pane = new HBox()
     .tap(_.setSpacing(10))

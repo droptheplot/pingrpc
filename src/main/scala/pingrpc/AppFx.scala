@@ -23,14 +23,17 @@ class AppFx extends Application {
 
     val screenBounds = Screen.getPrimary.getBounds
 
+    val scene = new Scene(appView, screenBounds.getWidth * 0.83, screenBounds.getHeight * 0.74)
+
+    scene.getStylesheets.add(getClass.getResource("/styles.css").toExternalForm)
+    scene.getStylesheets.add(new PrimerLight().getUserAgentStylesheet)
+
     primaryStage.setTitle("PingRPC")
-    primaryStage.setScene(new Scene(appView, screenBounds.getWidth * 0.83, screenBounds.getHeight * 0.74))
+    primaryStage.setScene(scene)
 
     Try(getClass.getResourceAsStream("/icon.png"))
       .map(new Image(_))
       .foreach(primaryStage.getIcons.add(_))
-
-    Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet)
 
     primaryStage.show()
   }

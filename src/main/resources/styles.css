@@ -1,0 +1,23 @@
+.code-area {
+  -fx-font-family: monospace;
+  -fx-font-size: 10pt;
+  -fx-background-color: -color-base-0;
+  -fx-padding: 5px 7px 5px;
+  -fx-border-radius: 3px;
+  -fx-border-color: -color-base-2;
+}
+
+.main-selection {
+  -fx-fill: -color-accent-0;
+}
+
+.form-message {
+  -fx-padding-left: 10px;
+  -fx-border-left-width: 2px;
+  -fx-border-left-color: -color-base-2;
+  -fx-border-left-style: solid;
+}
+
+.form-root {
+  -fx-padding: 7px 0 10px 15px;
+}

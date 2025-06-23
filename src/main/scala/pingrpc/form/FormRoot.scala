@@ -2,7 +2,6 @@ package pingrpc.form
 
 import com.google.protobuf.Descriptors.Descriptor
 import javafx.beans.property.SimpleBooleanProperty
-import javafx.geometry.Insets
 import javafx.scene.Node
 import javafx.scene.control.Label
 import javafx.scene.layout.VBox
@@ -17,7 +16,7 @@ case class FormRoot(descriptor: Descriptor, children: Seq[Form]) extends Form wi
   override def toNode: Node =
     new VBox()
       .tap(_.setSpacing(10))
-      .tap(_.setPadding(new Insets(7, 0, 10, 15)))
+      .tap(_.getStyleClass.add("form-root"))
       .tap(_.getChildren.add(new Label(descriptor.getFullName).tap(_.setFont(boldFont))))
       .tap(_.getChildren.addAll(children.map(_.toNode).asJava))
 }

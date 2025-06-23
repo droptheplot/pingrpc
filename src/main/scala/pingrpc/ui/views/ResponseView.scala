@@ -10,16 +10,12 @@ import scala.util.chaining.scalaUtilChainingOps
 
 class ResponseView extends VBox {
   val responseMessageLabel: Label = new Label("...")
-    .tap(_.setTextFill(grayColor))
+    .tap(_.getStyleClass.add("text-muted"))
 
   val jsonArea: CodeArea = new CodeArea()
     .tap(_.setEditable(false))
     .tap(_.setWrapText(true))
     .tap(_.textProperty.addListener((_, _, _) => JsonHighlighter.highlight(jsonArea)))
-    .tap(_.setBorder(areaBorder))
-    .tap(_.setPadding(areaInsets))
-    .tap(_.setBackground(areaBackground))
-    .tap(_.setStyle(areaFont))
   VBox.setVgrow(jsonArea, Priority.ALWAYS)
 
   val metadataView: MetadataView = new MetadataView()
@@ -33,22 +29,18 @@ class ResponseView extends VBox {
   val curlArea: CodeArea = new CodeArea()
     .tap(_.setEditable(false))
     .tap(_.setWrapText(true))
-    .tap(_.setBorder(areaBorder))
-    .tap(_.setPadding(areaInsets))
-    .tap(_.setBackground(areaBackground))
-    .tap(_.setStyle(areaFont))
     .tap(_.setPrefHeight(80))
 
   val responseStatusLabel = new Label("...")
-    .tap(_.setTextFill(grayColor))
+    .tap(_.getStyleClass.add("text-muted"))
 
   private val responseLabel = new Label("RESPONSE")
     .tap(_.setFont(boldFont))
-    .tap(_.setTextFill(grayColor))
+    .tap(_.getStyleClass.add("text-muted"))
 
   private val statusLabel = new Label("GRPCURL")
     .tap(_.setFont(boldFont))
-    .tap(_.setTextFill(grayColor))
+    .tap(_.getStyleClass.add("text-muted"))
 
   private val contentBox = new VBox()
     .tap(_.getChildren.add(jsonArea))
