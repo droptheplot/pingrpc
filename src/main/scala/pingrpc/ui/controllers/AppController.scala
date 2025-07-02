@@ -227,7 +227,7 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
       }
     }
 
-  def requestTabsListener(requestArea: StyleClassedTextArea, formPane: ScrollPane, methodsBox: ComboBox[Method]): ChangeListener[Tab] =
+  def requestTabsListener(requestArea: CodeArea, formPane: ScrollPane, methodsBox: ComboBox[Method]): ChangeListener[Tab] =
     (_: ObservableValue[_ <: Tab], _: Tab, tab: Tab) =>
       tab.getId match {
         case "form" if stateManager.currentState.getRequestDescriptor.hasName =>
@@ -247,7 +247,8 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
         case "json" =>
           val message = formPane.getUserData.asInstanceOf[FormRoot].toMessage
           val json = ProtoUtils.messageToJson(message)
-          requestArea.replaceText(json)
+
+          if (requestArea.getText != json) requestArea.replaceText(json)
         case _ =>
       }
 
