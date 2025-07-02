@@ -57,6 +57,8 @@ class RequestView extends VBox {
     .tap(_.getChildren.add(syncButton))
     .tap(_.getChildren.add(sendButton))
 
+  val metadataView = new MetadataView(editable = true)
+
   private val formContainer = new VBox()
     .tap(_.setPadding(new Insets(10, 0, 0, 0)))
     .tap(_.getChildren.add(formPane))
@@ -65,13 +67,20 @@ class RequestView extends VBox {
     .tap(_.setPadding(new Insets(10, 0, 0, 0)))
     .tap(_.getChildren.add(jsonArea))
 
+  private val metadataContainer = new VBox()
+    .tap(_.setPadding(new Insets(10, 0, 0, 0)))
+    .tap(_.getChildren.add(metadataView))
+
   private val formTab = new Tab("FORM", formContainer)
     .tap(_.setId("form"))
   private val jsonTab = new Tab("JSON", jsonContainer)
     .tap(_.setId("json"))
+  private val metadataTab = new Tab("Metadata", metadataContainer)
+    .tap(_.setId("metadata"))
 
   tabPane.getTabs.add(formTab)
   tabPane.getTabs.add(jsonTab)
+  tabPane.getTabs.add(metadataTab)
 
   setSpacing(10)
   setPadding(new Insets(10, 5, 10, 10))

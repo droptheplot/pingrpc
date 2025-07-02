@@ -5,23 +5,22 @@ import cats.effect.unsafe.implicits.global
 import com.google.protobuf.DescriptorProtos.{FileDescriptorProto, MethodDescriptorProto}
 import com.google.protobuf.Descriptors.FileDescriptor
 import com.google.protobuf.util.JsonFormat
-import com.google.protobuf.{DescriptorProtos, Descriptors, DynamicMessage, Message}
+import com.google.protobuf.{DescriptorProtos, Descriptors, DynamicMessage}
 import com.typesafe.scalalogging.StrictLogging
 import io.grpc.reflection.v1.ServiceResponse
 import io.grpc.{Status, StatusException}
 import javafx.beans.value.{ChangeListener, ObservableValue}
-import javafx.collections.ObservableMap
+import javafx.collections.ObservableList
 import javafx.event.ActionEvent
 import javafx.scene.control._
-import org.fxmisc.flowless.VirtualizedScrollPane
 import org.fxmisc.richtext.{CodeArea, StyleClassedTextArea}
 import pingrpc.form.{Form, FormRoot}
 import pingrpc.grpc.{CurlPrinter, FullMessageName, ReflectionManager, Sender}
 import pingrpc.proto.{ProtoUtils, serviceOrdering}
 import pingrpc.storage.StateManager
-import pingrpc.ui.RequestTimer
 import pingrpc.ui.tasks.SendTask
 import pingrpc.ui.views.AlertView
+import pingrpc.ui.{Header, RequestTimer, headersFromMap, headersToMap}
 import protobuf.MethodOuterClass.Method
 import protobuf.ServiceOuterClass.Service
 import protobuf.StateOuterClass.State
@@ -129,7 +128,8 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
       requestArea: StyleClassedTextArea,
       curlArea: CodeArea,
       jsonArea: CodeArea,
-      responseHeaders: ObservableMap[String, String],
+      requestHeaders: ObservableList[Header],
+      responseHeaders: ObservableList[Header],
       responseStatusLabel: Label
   )(e: ActionEvent): Unit = {
     val service = servicesBox.getSelectionModel.getSelectedItem
@@ -152,11 +152,27 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
           descriptor <- findMessageDescriptor(fileDescriptors, methodsBox.getSelectionModel.getSelectedItem.getInputType)
           message <- ProtoUtils.messageFromJson(requestArea.getText, descriptor)
         } yield (message, requestArea.getText)
+      case _ =>
+        val message = formPane.getUserData.asInstanceOf[FormRoot].toMessage
+        Right((message, ProtoUtils.messageToJson(message)))
     }) match {
       case Right((message, json)) =>
-        curlArea.replaceText(CurlPrinter.print(service, method, urlField.getText, json))
+        curlArea.replaceText(CurlPrinter.print(service, method, urlField.getText, json, headersToMap(requestHeaders)))
 
-        val sendTask = new SendTask(message, methodName, urlField.getText, requestTimer, jsonArea, responseHeaders, sender, fileDescriptors, method, sendButton)
+        val sendTask = new SendTask(
+          message,
+          methodName,
+          urlField.getText,
+          requestTimer,
+          jsonArea,
+          requestHeaders,
+          responseHeaders,
+          sender,
+          fileDescriptors,
+          method,
+          sendButton
+        )
+
         new Thread(sendTask).start()
       case Left(e) =>
         new AlertView("Cannot parse json", e.getMessage).showAndWait
@@ -167,7 +183,8 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
       urlField: TextField,
       servicesBox: ComboBox[Service],
       methodsBox: ComboBox[Method],
-      headers: ObservableMap[String, String],
+      requestHeaders: ObservableList[Header],
+      responseHeaders: ObservableList[Header],
       formPane: ScrollPane,
       responseArea: CodeArea,
       sendButton: Button,
@@ -199,7 +216,13 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
         urlField.setText(state.getUrl)
         sendButton.setDisable(false)
         responseMessageLabel.setText(responseDescriptor.getFullName)
-        headers.putAll(state.getResponseHeadersMap)
+
+        requestHeaders.clear()
+        requestHeaders.addAll(headersFromMap(state.getRequestHeadersMap.asScala.toMap))
+
+        responseHeaders.clear()
+        responseHeaders.addAll(headersFromMap(state.getResponseHeadersMap.asScala.toMap))
+
         responseOpt.foreach(responseArea.replaceText)
       }
     }

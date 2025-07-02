@@ -1,44 +1,54 @@
 package pingrpc.ui.views
 
-import javafx.application.Platform
-import javafx.beans.binding.Bindings
-import javafx.collections.{FXCollections, MapChangeListener, ObservableList, ObservableMap}
-import javafx.scene.Node
-import javafx.scene.control.TextField
+import javafx.collections.{FXCollections, ListChangeListener, ObservableList}
+import javafx.scene.control.{Button, TextField}
 import javafx.scene.layout.{HBox, Priority, VBox}
+import pingrpc.ui.Header
 
 import scala.jdk.CollectionConverters._
 import scala.util.chaining.scalaUtilChainingOps
 
-class MetadataView extends VBox {
-  val headers: ObservableMap[String, String] = FXCollections.observableHashMap()
-  private val nodes: ObservableList[Node] = FXCollections.observableArrayList()
+class MetadataView(editable: Boolean) extends VBox {
+  val headers: ObservableList[Header] = FXCollections.observableArrayList()
 
-  headers.addListener(new MapChangeListener[String, String] {
-    override def onChanged(change: MapChangeListener.Change[_ <: String, _ <: String]): Unit =
-      Platform.runLater(() => {
-        nodes.clear()
-        nodes.setAll(change.getMap.asScala.map { case (k, v) => toRow(k, v) }.toList.asJava)
-      })
+  private val container: VBox = new VBox()
+    .tap(_.setSpacing(10))
+
+  private val addButton = new Button("Add")
+    .tap(_.setOnAction { _ => headers.add(Header.empty) })
+
+  private def createRemoveButton(id: Int) = new Button("Remove")
+    .tap(_.setOnAction { _ => headers.remove(id) })
+
+  headers.addListener(new ListChangeListener[Header] {
+    override def onChanged(change: ListChangeListener.Change[_ <: Header]): Unit = {
+      val nodes = change.getList.asScala.zipWithIndex.map((toRow _).tupled).toList.asJava
+
+      container.getChildren.clear()
+      container.getChildren.addAll(nodes)
+    }
   })
 
-  private def toRow(key: String, value: String): HBox = {
+  private def toRow(header: Header, id: Int): HBox = {
     val keyField = new TextField()
-      .tap(_.setText(key))
-      .tap(_.setEditable(false))
+      .tap(_.setEditable(editable))
+      .tap(_.textProperty.bindBidirectional(header.key))
     HBox.setHgrow(keyField, Priority.ALWAYS)
 
     val valueField = new TextField()
-      .tap(_.setText(value))
-      .tap(_.setEditable(false))
+      .tap(_.setEditable(editable))
+      .tap(_.textProperty.bindBidirectional(header.value))
     HBox.setHgrow(valueField, Priority.ALWAYS)
 
     new HBox()
       .tap(_.getChildren.addAll(keyField, valueField))
+      .tap(hbox => if (editable) hbox.getChildren.add(createRemoveButton(id)))
       .tap(_.setSpacing(10))
   }
 
   setSpacing(10)
 
-  Bindings.bindContentBidirectional(nodes, getChildren)
+  getChildren.add(container)
+
+  if (editable) getChildren.add(addButton)
 }

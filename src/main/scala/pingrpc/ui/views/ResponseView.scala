@@ -18,7 +18,7 @@ class ResponseView extends VBox {
     .tap(_.textProperty.addListener((_, _, _) => JsonHighlighter.highlight(jsonArea)))
   VBox.setVgrow(jsonArea, Priority.ALWAYS)
 
-  val metadataView: MetadataView = new MetadataView()
+  val metadataView: MetadataView = new MetadataView(editable = false)
 
   private val responseMetadataPane: ScrollPane = new ScrollPane()
     .tap(_.setContent(metadataView))

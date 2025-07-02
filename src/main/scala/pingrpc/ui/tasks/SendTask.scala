@@ -6,16 +6,15 @@ import com.google.protobuf.{Descriptors, InvalidProtocolBufferException, Message
 import io.grpc.StatusException
 import javafx.animation.AnimationTimer
 import javafx.application.Platform
-import javafx.collections.ObservableMap
+import javafx.collections.ObservableList
 import javafx.concurrent.Task
-import javafx.scene.control.{Button, TextArea}
+import javafx.scene.control.Button
 import org.fxmisc.richtext.CodeArea
 import pingrpc.grpc.{FullMessageName, Sender}
 import pingrpc.proto.ProtoUtils
 import pingrpc.ui.views.AlertView
+import pingrpc.ui.{Header, headersFromMap, headersToMap}
 import protobuf.MethodOuterClass.Method
-
-import scala.jdk.CollectionConverters._
 
 class SendTask(
     message: Message,
@@ -23,7 +22,8 @@ class SendTask(
     url: String,
     timer: AnimationTimer,
     jsonArea: CodeArea,
-    responseHeaders: ObservableMap[String, String],
+    requestHeaders: ObservableList[Header],
+    responseHeaders: ObservableList[Header],
     sender: Sender,
     fileDescriptors: List[FileDescriptor],
     method: Method,
@@ -36,7 +36,8 @@ class SendTask(
     val responseOpt = for {
       requestDescriptor <- findMessageDescriptor(fileDescriptors, method.getInputType)
       responseDescriptor <- findMessageDescriptor(fileDescriptors, method.getOutputType)
-      response <- sender.send(requestDescriptor, responseDescriptor, methodName, url, message).attempt.unsafeRunSync
+      metadata = headersToMap(requestHeaders)
+      response <- sender.send(requestDescriptor, responseDescriptor, methodName, url, message, metadata).attempt.unsafeRunSync
     } yield response
 
     sendButton.setDisable(false)
@@ -45,7 +46,8 @@ class SendTask(
     responseOpt match {
       case Right(response) =>
         Platform.runLater(() => {
-          responseHeaders.putAll(response.headers.asJava)
+          responseHeaders.clear()
+          responseHeaders.addAll(headersFromMap(response.headers))
           jsonArea.replaceText(response.message)
         })
       case Left(error: StatusException) =>
