@@ -41,7 +41,11 @@ object Form {
 
           FormField.BooleanField(fieldDescriptor, property)
         case JavaType.ENUM =>
-          val property = new SimpleObjectProperty[Descriptors.EnumValueDescriptor](fieldDescriptor.getEnumType.getValues.getFirst)
+          val property = new SimpleObjectProperty[Descriptors.EnumValueDescriptor]()
+          val value = messageOpt
+            .flatMap(getValue[Descriptors.EnumValueDescriptor](_, fieldDescriptor))
+            .getOrElse(fieldDescriptor.getEnumType.getValues.getFirst)
+          property.setValue(value)
 
           FormField.EnumField(fieldDescriptor, property)
         case JavaType.INT =>
