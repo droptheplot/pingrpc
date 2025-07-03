@@ -1,5 +1,7 @@
 # PingRPC
 
+<img src="src/main/resources/icon.png" width="128"/>
+
 [![Test](https://github.com/droptheplot/pingrpc/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/droptheplot/pingrpc/actions/workflows/test.yml)
 
 Cross platform gRPC client
