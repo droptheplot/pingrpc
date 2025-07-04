@@ -4,10 +4,9 @@ import com.google.protobuf.Descriptors
 import com.google.protobuf.Descriptors.FieldDescriptor
 import javafx.beans.property._
 import javafx.geometry.Pos
-import javafx.scene.{Cursor, Node}
 import javafx.scene.control._
 import javafx.scene.layout.HBox
-import javafx.util.converter.NumberStringConverter
+import javafx.scene.{Cursor, Node}
 import pingrpc.proto.EnumValueDescriptorConverter
 
 import java.text.NumberFormat
@@ -31,13 +30,13 @@ trait FormField[T] extends Form {
   private val label: Label = new Label(fieldDescriptor.getName)
     .tap(_.setCursor(Cursor.HAND))
     .tap(_.setOnMouseClicked { _ => isDisabled.set(!isDisabled.get) })
-
-  private val numberFormat = NumberFormat.getNumberInstance.tap(_.setGroupingUsed(false))
-
-  val numberStringConverter = new NumberStringConverter(numberFormat)
 }
 
 object FormField {
+  private val numberFormat = NumberFormat.getNumberInstance.tap(_.setGroupingUsed(false))
+
+  private val numberStringConverter = new HiddenZeroNumberStringConverter(numberFormat)
+
   case class StringField(fieldDescriptor: FieldDescriptor, property: SimpleStringProperty) extends FormField[String] {
     override def toNode: Node = {
       val textField = new TextField()
