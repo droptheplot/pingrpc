@@ -5,7 +5,7 @@ import cats.effect.unsafe.implicits.global
 import com.google.protobuf.DescriptorProtos.{FileDescriptorProto, MethodDescriptorProto}
 import com.google.protobuf.Descriptors.FileDescriptor
 import com.google.protobuf.util.JsonFormat
-import com.google.protobuf.{DescriptorProtos, Descriptors, DynamicMessage}
+import com.google.protobuf.{DescriptorProtos, Descriptors, DynamicMessage, Message}
 import com.typesafe.scalalogging.StrictLogging
 import io.grpc.reflection.v1.ServiceResponse
 import io.grpc.{Status, StatusException}
@@ -13,7 +13,7 @@ import javafx.beans.value.{ChangeListener, ObservableValue}
 import javafx.collections.ObservableList
 import javafx.event.ActionEvent
 import javafx.scene.control._
-import org.fxmisc.richtext.{CodeArea, StyleClassedTextArea}
+import org.fxmisc.richtext.CodeArea
 import pingrpc.form.{Form, FormRoot}
 import pingrpc.grpc.{CurlPrinter, FullMessageName, ReflectionManager, Sender}
 import pingrpc.proto.{ProtoUtils, serviceOrdering}
@@ -124,8 +124,6 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
       servicesBox: ComboBox[Service],
       methodsBox: ComboBox[Method],
       formPane: ScrollPane,
-      tabPane: TabPane,
-      requestArea: StyleClassedTextArea,
       curlArea: CodeArea,
       jsonArea: CodeArea,
       requestHeaders: ObservableList[Header],
@@ -143,40 +141,26 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
     responseHeaders.clear()
     jsonArea.clear()
 
-    (tabPane.getSelectionModel.getSelectedItem.getId match {
-      case "form" =>
-        val message = formPane.getUserData.asInstanceOf[FormRoot].toMessage
-        Right((message, ProtoUtils.messageToJson(message)))
-      case "json" =>
-        for {
-          descriptor <- findMessageDescriptor(fileDescriptors, methodsBox.getSelectionModel.getSelectedItem.getInputType)
-          message <- ProtoUtils.messageFromJson(requestArea.getText, descriptor)
-        } yield (message, requestArea.getText)
-      case _ =>
-        val message = formPane.getUserData.asInstanceOf[FormRoot].toMessage
-        Right((message, ProtoUtils.messageToJson(message)))
-    }) match {
-      case Right((message, json)) =>
-        curlArea.replaceText(CurlPrinter.print(service, method, urlField.getText, json, headersToMap(requestHeaders)))
+    val message: Message = formPane.getUserData.asInstanceOf[FormRoot].toMessage
+    val json: String = ProtoUtils.messageToJson(message)
 
-        val sendTask = new SendTask(
-          message,
-          methodName,
-          urlField.getText,
-          requestTimer,
-          jsonArea,
-          requestHeaders,
-          responseHeaders,
-          sender,
-          fileDescriptors,
-          method,
-          sendButton
-        )
+    curlArea.replaceText(CurlPrinter.print(service, method, urlField.getText, json, headersToMap(requestHeaders)))
 
-        new Thread(sendTask).start()
-      case Left(e) =>
-        new AlertView("Cannot parse json", e.getMessage).showAndWait
-    }
+    val sendTask = new SendTask(
+      message,
+      methodName,
+      urlField.getText,
+      requestTimer,
+      jsonArea,
+      requestHeaders,
+      responseHeaders,
+      sender,
+      fileDescriptors,
+      method,
+      sendButton
+    )
+
+    new Thread(sendTask).start()
   }
 
   def applyState(
@@ -227,30 +211,33 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
       }
     }
 
-  def requestTabsListener(requestArea: CodeArea, formPane: ScrollPane, methodsBox: ComboBox[Method]): ChangeListener[Tab] =
-    (_: ObservableValue[_ <: Tab], _: Tab, tab: Tab) =>
-      tab.getId match {
-        case "form" if stateManager.currentState.getRequestDescriptor.hasName =>
-          val fileDescriptors = ProtoUtils.toFileDescriptors(stateManager.currentState.getFileDescriptorProtosList.asScala.toList)
+  def requestTabsListener(requestArea: CodeArea, formPane: ScrollPane): ChangeListener[Tab] = (_: ObservableValue[_ <: Tab], _: Tab, tab: Tab) =>
+    tab.getId match {
+      case "json" =>
+        val message = formPane.getUserData.asInstanceOf[FormRoot].toMessage
+        val json = ProtoUtils.messageToJson(message)
 
-          (for {
-            requestDescriptor <- findMessageDescriptor(fileDescriptors, methodsBox.getSelectionModel.getSelectedItem.getInputType)
-            message <- ProtoUtils.messageFromJson(requestArea.getText, requestDescriptor)
-            form = Form.build(requestDescriptor, Option.when(message.toByteArray.nonEmpty)(message))
-          } yield form) match {
-            case Right(form) =>
-              formPane.setContent(form.toNode)
-              formPane.setUserData(form)
-            case Left(error) =>
-              logger.error("Cannot convert json to form", error)
-          }
-        case "json" =>
-          val message = formPane.getUserData.asInstanceOf[FormRoot].toMessage
-          val json = ProtoUtils.messageToJson(message)
+        if (requestArea.getText != json) requestArea.replaceText(json)
+      case _ =>
+    }
 
-          if (requestArea.getText != json) requestArea.replaceText(json)
-        case _ =>
-      }
+  def jsonToMessage(requestArea: CodeArea, formPane: ScrollPane, methodsBox: ComboBox[Method]): Unit = {
+    val fileDescriptors = ProtoUtils.toFileDescriptors(stateManager.currentState.getFileDescriptorProtosList.asScala.toList)
+
+    (for {
+      requestDescriptor <- findMessageDescriptor(fileDescriptors, methodsBox.getSelectionModel.getSelectedItem.getInputType)
+      message <- ProtoUtils.messageFromJson(requestArea.getText, requestDescriptor)
+      form = Form.build(requestDescriptor, Option.when(message.toByteArray.nonEmpty)(message))
+    } yield form) match {
+      case Right(form) =>
+        requestArea.getStyleClass.removeAll("error")
+        formPane.setContent(form.toNode)
+        formPane.setUserData(form)
+      case Left(error) =>
+        requestArea.getStyleClass.add("error")
+        logger.error("Cannot convert json to form", error)
+    }
+  }
 
   private def fillServices(services: List[Service], selectedService: Service, servicesBox: ComboBox[Service]): Unit =
     if (services.nonEmpty) {

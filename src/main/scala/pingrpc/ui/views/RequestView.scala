@@ -18,7 +18,6 @@ class RequestView extends VBox {
 
   val jsonArea: CodeArea = new CodeArea()
     .tap(_.setWrapText(true))
-    .tap(_.textProperty.addListener((_, _, _) => JsonHighlighter.highlight(jsonArea)))
   VBox.setVgrow(jsonArea, Priority.ALWAYS)
 
   val syncButton: Button = new Button("Sync")

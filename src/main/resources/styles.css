@@ -21,3 +21,8 @@
 .form-root {
   -fx-padding: 7px 0 10px 15px;
 }
+
+.error {
+  -fx-border-color: -color-danger-fg;
+  -fx-background-color: -color-danger-0;
+}

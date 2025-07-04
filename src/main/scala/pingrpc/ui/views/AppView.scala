@@ -2,6 +2,7 @@ package pingrpc.ui.views
 
 import com.typesafe.scalalogging.StrictLogging
 import javafx.scene.layout._
+import pingrpc.ui.JsonHighlighter
 import pingrpc.ui.controllers.AppController
 
 import scala.util.chaining.scalaUtilChainingOps
@@ -42,8 +43,6 @@ class AppView(appController: AppController) extends FlowPane with StrictLogging 
         requestView.servicesBox,
         requestView.methodsBox,
         requestView.formPane,
-        requestView.tabPane,
-        requestView.jsonArea,
         responseView.curlArea,
         responseView.jsonArea,
         requestView.metadataView.headers,
@@ -53,7 +52,7 @@ class AppView(appController: AppController) extends FlowPane with StrictLogging 
     )
 
   requestView.tabPane.getSelectionModel.selectedItemProperty
-    .addListener(appController.requestTabsListener(requestView.jsonArea, requestView.formPane, requestView.methodsBox))
+    .addListener(appController.requestTabsListener(requestView.jsonArea, requestView.formPane))
 
   requestView.syncButton
     .setOnAction(appController.syncAction(requestView.urlField, requestView.servicesBox, requestView.methodsBox)(_))
@@ -69,4 +68,9 @@ class AppView(appController: AppController) extends FlowPane with StrictLogging 
     requestView.sendButton,
     responseView.responseMessageLabel
   )
+
+  requestView.jsonArea.textProperty.addListener { (_, _, _) =>
+    JsonHighlighter.highlight(requestView.jsonArea)
+    appController.jsonToMessage(requestView.jsonArea, requestView.formPane, requestView.methodsBox)
+  }
 }
