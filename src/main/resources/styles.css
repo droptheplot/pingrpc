@@ -12,10 +12,10 @@
 }
 
 .form-message {
-  -fx-padding-left: 10px;
-  -fx-border-left-width: 2px;
-  -fx-border-left-color: -color-base-2;
-  -fx-border-left-style: solid;
+  -fx-padding: 0 0 0 10px;
+  -fx-border-width: 0 0 0 2px;
+  -fx-border-color: -color-base-1;
+  -fx-border-style: none none none solid;
 }
 
 .form-root {
