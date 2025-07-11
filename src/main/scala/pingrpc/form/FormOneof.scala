@@ -18,7 +18,7 @@ case class FormOneof(descriptor: OneofDescriptor, children: Seq[FormField], sele
     val message = new HBox()
       .tap(_.setSpacing(10))
       .tap(_.getStyleClass.add("form-message"))
-      .tap(_.getChildren.add(current.getValue.toNode))
+      .tap { message => selected.map(_.toNode).foreach(message.getChildren.add) }
 
     val label = new Label(descriptor.getName)
 

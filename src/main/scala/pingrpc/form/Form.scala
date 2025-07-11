@@ -42,12 +42,12 @@ object Form {
         val property = new SimpleStringProperty()
         messageOpt.flatMap(getValue[String](_, fieldDescriptor)).foreach(property.setValue)
 
-        FormValue.StringValue(fieldDescriptor, property)
+        StringValue(fieldDescriptor, property)
       case JavaType.BOOLEAN =>
         val property = new SimpleBooleanProperty()
         messageOpt.flatMap(getValue[java.lang.Boolean](_, fieldDescriptor)).foreach(property.setValue)
 
-        FormValue.BooleanValue(fieldDescriptor, property)
+        BooleanValue(fieldDescriptor, property)
       case JavaType.ENUM =>
         val property = new SimpleObjectProperty[Descriptors.EnumValueDescriptor]()
         val value = messageOpt
@@ -55,28 +55,28 @@ object Form {
           .getOrElse(fieldDescriptor.getEnumType.getValues.getFirst)
         property.setValue(value)
 
-        FormValue.EnumValue(fieldDescriptor, property)
+        EnumValue(fieldDescriptor, property)
       case JavaType.INT =>
         val property = new SimpleIntegerProperty()
         messageOpt.flatMap(getValue[java.lang.Integer](_, fieldDescriptor)).foreach(property.setValue)
 
-        FormValue.IntValue(fieldDescriptor, property)
+        IntValue(fieldDescriptor, property)
       case JavaType.LONG =>
         val property = new SimpleLongProperty()
         messageOpt.flatMap(getValue[java.lang.Long](_, fieldDescriptor)).foreach(property.setValue)
 
-        FormValue.LongValue(fieldDescriptor, property)
+        LongValue(fieldDescriptor, property)
       case JavaType.FLOAT =>
         val property = new SimpleFloatProperty()
 
         messageOpt.flatMap(getValue[java.lang.Float](_, fieldDescriptor)).foreach(property.setValue)
 
-        FormValue.FloatValue(fieldDescriptor, property)
+        FloatValue(fieldDescriptor, property)
       case JavaType.DOUBLE =>
         val property = new SimpleDoubleProperty()
         messageOpt.flatMap(getValue[java.lang.Double](_, fieldDescriptor)).foreach(property.setValue)
 
-        FormValue.DoubleValue(fieldDescriptor, property)
+        DoubleValue(fieldDescriptor, property)
     }
 
   private def getValue[T](message: Message, fieldDescriptor: FieldDescriptor): Option[T] =

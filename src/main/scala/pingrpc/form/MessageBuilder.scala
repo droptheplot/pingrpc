@@ -3,7 +3,7 @@ package pingrpc.form
 import com.google.protobuf.Descriptors.Descriptor
 import com.google.protobuf.{DynamicMessage, Message}
 
-trait FormMessageBuilder {
+trait MessageBuilder {
   def descriptor: Descriptor
 
   def children: Seq[Form]

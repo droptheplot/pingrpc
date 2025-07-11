@@ -10,7 +10,7 @@ import pingrpc.ui.boldFont
 import scala.jdk.CollectionConverters._
 import scala.util.chaining.scalaUtilChainingOps
 
-case class FormMessage(fieldDescriptor: FieldDescriptor, children: Seq[Form]) extends Form with FormMessageBuilder with FormField {
+case class FormMessage(fieldDescriptor: FieldDescriptor, children: Seq[Form]) extends Form with MessageBuilder with FormField {
   def descriptor: Descriptor = fieldDescriptor.getMessageType
 
   val isDisabled: SimpleBooleanProperty = new SimpleBooleanProperty(false)

@@ -9,7 +9,7 @@ import pingrpc.ui.boldFont
 import scala.jdk.CollectionConverters._
 import scala.util.chaining.scalaUtilChainingOps
 
-case class FormRoot(descriptor: Descriptor, children: Seq[Form]) extends Form with FormMessageBuilder {
+case class FormRoot(descriptor: Descriptor, children: Seq[Form]) extends Form with MessageBuilder {
   override def toNode: Node =
     new VBox()
       .tap(_.setSpacing(10))
