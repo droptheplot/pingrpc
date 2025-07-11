@@ -17,60 +17,67 @@ object Form {
   def build(descriptor: Descriptor, messageOpt: Option[Message]): Form =
     FormRoot(descriptor, descriptor.getFields.asScala.map(Form.build(_, messageOpt)).toList)
 
-  private def build(fieldDescriptor: FieldDescriptor, messageOpt: Option[Message]): Form = fieldDescriptor.getJavaType match {
-    case JavaType.MESSAGE =>
-      val nestedMessageOpt: Option[Message] = messageOpt.flatMap { message =>
-        Option(message.getField(fieldDescriptor))
-          .collect {
-            case message: Message => message
-            case v: java.util.List[Message] if v.size > 0 => v.getFirst
-          }
-      }
+  private def build(fieldDescriptor: FieldDescriptor, messageOpt: Option[Message]): FormField =
+    fieldDescriptor.getJavaType match {
+      case JavaType.MESSAGE =>
+        val nestedMessageOpt: Option[Message] = messageOpt.flatMap { message =>
+          Option(message.getField(fieldDescriptor))
+            .collect {
+              case message: Message => message
+              case v: java.util.List[Message] if v.size > 0 => v.getFirst
+            }
+        }
 
-      FormMessage(fieldDescriptor, fieldDescriptor.getMessageType.getFields.asScala.map(Form.build(_, nestedMessageOpt)).toList)
-    case _ =>
-      fieldDescriptor.getJavaType match {
-        case JavaType.STRING =>
-          val property = new SimpleStringProperty()
-          messageOpt.flatMap(getValue[String](_, fieldDescriptor)).foreach(property.setValue)
+        val oneofs = fieldDescriptor.getMessageType.getOneofs.asScala.toList.map { oneofDescriptor =>
+          val fields = oneofDescriptor.getFields.asScala.map(Form.build(_, nestedMessageOpt)).toList
+          FormOneof.build(oneofDescriptor, fields, nestedMessageOpt)
+        }
 
-          FormField.StringField(fieldDescriptor, property)
-        case JavaType.BOOLEAN =>
-          val property = new SimpleBooleanProperty()
-          messageOpt.flatMap(getValue[java.lang.Boolean](_, fieldDescriptor)).foreach(property.setValue)
+        val fields = fieldDescriptor.getMessageType.getFields.asScala.toList
+          .filter(fieldDescriptor => Option(fieldDescriptor.getContainingOneof).isEmpty)
+          .map(Form.build(_, nestedMessageOpt))
 
-          FormField.BooleanField(fieldDescriptor, property)
-        case JavaType.ENUM =>
-          val property = new SimpleObjectProperty[Descriptors.EnumValueDescriptor]()
-          val value = messageOpt
-            .flatMap(getValue[Descriptors.EnumValueDescriptor](_, fieldDescriptor))
-            .getOrElse(fieldDescriptor.getEnumType.getValues.getFirst)
-          property.setValue(value)
+        FormMessage(fieldDescriptor, fields ++ oneofs)
+      case JavaType.STRING =>
+        val property = new SimpleStringProperty()
+        messageOpt.flatMap(getValue[String](_, fieldDescriptor)).foreach(property.setValue)
 
-          FormField.EnumField(fieldDescriptor, property)
-        case JavaType.INT =>
-          val property = new SimpleIntegerProperty()
-          messageOpt.flatMap(getValue[java.lang.Integer](_, fieldDescriptor)).foreach(property.setValue)
+        FormValue.StringValue(fieldDescriptor, property)
+      case JavaType.BOOLEAN =>
+        val property = new SimpleBooleanProperty()
+        messageOpt.flatMap(getValue[java.lang.Boolean](_, fieldDescriptor)).foreach(property.setValue)
 
-          FormField.IntField(fieldDescriptor, property)
-        case JavaType.LONG =>
-          val property = new SimpleLongProperty()
-          messageOpt.flatMap(getValue[java.lang.Long](_, fieldDescriptor)).foreach(property.setValue)
+        FormValue.BooleanValue(fieldDescriptor, property)
+      case JavaType.ENUM =>
+        val property = new SimpleObjectProperty[Descriptors.EnumValueDescriptor]()
+        val value = messageOpt
+          .flatMap(getValue[Descriptors.EnumValueDescriptor](_, fieldDescriptor))
+          .getOrElse(fieldDescriptor.getEnumType.getValues.getFirst)
+        property.setValue(value)
 
-          FormField.LongField(fieldDescriptor, property)
-        case JavaType.FLOAT =>
-          val property = new SimpleFloatProperty()
+        FormValue.EnumValue(fieldDescriptor, property)
+      case JavaType.INT =>
+        val property = new SimpleIntegerProperty()
+        messageOpt.flatMap(getValue[java.lang.Integer](_, fieldDescriptor)).foreach(property.setValue)
 
-          messageOpt.flatMap(getValue[java.lang.Float](_, fieldDescriptor)).foreach(property.setValue)
+        FormValue.IntValue(fieldDescriptor, property)
+      case JavaType.LONG =>
+        val property = new SimpleLongProperty()
+        messageOpt.flatMap(getValue[java.lang.Long](_, fieldDescriptor)).foreach(property.setValue)
 
-          FormField.FloatField(fieldDescriptor, property)
-        case JavaType.DOUBLE =>
-          val property = new SimpleDoubleProperty()
-          messageOpt.flatMap(getValue[java.lang.Double](_, fieldDescriptor)).foreach(property.setValue)
+        FormValue.LongValue(fieldDescriptor, property)
+      case JavaType.FLOAT =>
+        val property = new SimpleFloatProperty()
 
-          FormField.DoubleField(fieldDescriptor, property)
-      }
-  }
+        messageOpt.flatMap(getValue[java.lang.Float](_, fieldDescriptor)).foreach(property.setValue)
+
+        FormValue.FloatValue(fieldDescriptor, property)
+      case JavaType.DOUBLE =>
+        val property = new SimpleDoubleProperty()
+        messageOpt.flatMap(getValue[java.lang.Double](_, fieldDescriptor)).foreach(property.setValue)
+
+        FormValue.DoubleValue(fieldDescriptor, property)
+    }
 
   private def getValue[T](message: Message, fieldDescriptor: FieldDescriptor): Option[T] =
     message.getField(fieldDescriptor) match {
