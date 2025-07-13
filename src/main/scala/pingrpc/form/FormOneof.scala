@@ -11,27 +11,30 @@ import pingrpc.proto.FormFieldConverter
 import scala.jdk.CollectionConverters._
 import scala.util.chaining.scalaUtilChainingOps
 
-case class FormOneof(descriptor: OneofDescriptor, children: Seq[FormField], selected: Option[FormField]) extends Form {
-  private val current = new SimpleObjectProperty[FormField](selected.orNull)
+case class FormOneof(descriptor: OneofDescriptor, children: Seq[FormField], default: Option[FormField]) extends Form {
+  private val current = new SimpleObjectProperty[FormField](default.orElse(children.headOption).orNull)
 
   override def toNode: Node = {
     val message = new HBox()
       .tap(_.setSpacing(10))
       .tap(_.getStyleClass.add("form-message"))
-      .tap { message => selected.map(_.toNode).foreach(message.getChildren.add) }
 
     val label = new Label(descriptor.getName)
 
     val comboBox = new ComboBox[FormField]
       .tap(_.setConverter(new FormFieldConverter))
       .tap(_.getItems.addAll(children.asJava))
-      .tap(_.getSelectionModel.select(current.getValue))
       .tap(_.setOnAction { e =>
         val selected = e.getSource.asInstanceOf[ComboBox[FormField]].getSelectionModel.getSelectedItem
         current.setValue(selected)
         message.getChildren.clear()
         message.getChildren.add(selected.toNode)
       })
+
+    Option(current.getValue).foreach { form =>
+      comboBox.getSelectionModel.select(form)
+      message.getChildren.add(form.toNode)
+    }
 
     new VBox()
       .tap(_.setSpacing(10))
