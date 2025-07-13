@@ -13,6 +13,7 @@ class StateManager extends StrictLogging {
   def save(state: State): IO[Unit] =
     for {
       file <- getStoreFile
+      _ <- IO(Files.createDirectories(file.getParent))
       _ <- IO(Files.createFile(file)).recoverWith { case _: FileAlreadyExistsException => IO.unit }
       _ <- IO(Files.write(file, state.toByteArray))
       _ = { currentState = state }
