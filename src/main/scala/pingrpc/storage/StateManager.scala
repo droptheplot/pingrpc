@@ -36,5 +36,6 @@ class StateManager extends StrictLogging {
       userDataDir <- IO(AppDirsFactory.getInstance.getUserDataDir("PingRPC", null, "$USER"))
       userDataPath <- IO(Path.of(userDataDir))
       file <- IO(userDataPath.resolve("store.txt"))
+      _ <- IO(logger.info(s"Using store: $file"))
     } yield file
 }
