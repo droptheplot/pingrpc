@@ -5,12 +5,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-24.04-arm, ubuntu-latest, windows-latest]
+        os: [macos-15, ubuntu-24.04-arm, ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '22'
           distribution: 'temurin'
           cache: 'sbt'
       - uses: sbt/setup-sbt@v1
@@ -22,7 +22,7 @@ jobs:
         run: |
           $version = (sbt -batch -error "print version" | Select-Object -First 1).Trim()
           echo "VERSION=$version" >> $env:GITHUB_ENV
-      - if: matrix.os == 'macos-latest'
+      - if: matrix.os == 'macos-15'
         run: |
          jpackage --input target/scala-2.13 \
            --main-jar pingrpc-assembly-${{ env.VERSION }}.jar \
@@ -45,7 +45,7 @@ jobs:
            --type exe `
            --app-version ${{ env.VERSION }} `
            --name pingrpc `
-      - if: matrix.os == 'macos-latest'
+      - if: matrix.os == 'macos-15'
         uses: actions/upload-artifact@v4.6.2
         with:
           name: pingrpc-arm64.dmg
