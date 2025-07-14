@@ -5,6 +5,7 @@ import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor}
 import com.google.protobuf.{Descriptors, Message}
 import javafx.beans.property._
 import javafx.scene.Node
+import pingrpc.form.values.{BooleanValue, DoubleValue, EnumValue, FloatValue, IntValue, LongValue, StringValue}
 
 import scala.jdk.CollectionConverters._
 

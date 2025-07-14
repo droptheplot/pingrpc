@@ -16,7 +16,11 @@ trait FormValue[T] extends Form with FormField {
 
   def property: Property[T]
 
-  def toValue: Option[T] = Option(property.getValue).filterNot(_ => isDisabled.get)
+  def default: T
+
+  def toValue: Option[T] = Option(property.getValue)
+    .filterNot(_ => isDisabled.get)
+    .filterNot(_ == default)
 
   def fieldContainer(node: Node): HBox = new HBox()
     .tap(_.setSpacing(10))
