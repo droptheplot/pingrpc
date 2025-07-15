@@ -5,7 +5,7 @@ import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor}
 import com.google.protobuf.{Descriptors, Message}
 import javafx.beans.property._
 import javafx.scene.Node
-import pingrpc.form.values.{BooleanValue, DoubleValue, EnumValue, FloatValue, IntValue, LongValue, StringValue}
+import pingrpc.form.values.{BooleanValue, DoubleValue, EnumValue, FloatValue, IntValue, LongValue, StringValue, UnknownValue}
 
 import scala.jdk.CollectionConverters._
 
@@ -78,6 +78,8 @@ object Form {
         messageOpt.flatMap(getValue[java.lang.Double](_, fieldDescriptor)).foreach(property.setValue)
 
         DoubleValue(fieldDescriptor, property)
+      case _ =>
+        UnknownValue(fieldDescriptor)
     }
 
   private def getValue[T](message: Message, fieldDescriptor: FieldDescriptor): Option[T] =
