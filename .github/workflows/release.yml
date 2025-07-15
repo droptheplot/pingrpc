@@ -29,7 +29,7 @@ jobs:
            --type dmg \
            --icon src/main/resources/icon.icns \
            --app-version ${{ env.VERSION }} \
-           --name pingrpc
+           --name PingRPC
       - if: matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-24.04-arm'
         run: |
          jpackage --input target/scala-2.13 \
@@ -37,14 +37,14 @@ jobs:
            --type deb \
            --icon src/main/resources/icon.icns \
            --app-version ${{ env.VERSION }} \
-           --name pingrpc
+           --name PingRPC
       - if: matrix.os == 'windows-latest'
         run: |
          jpackage --input target/scala-2.13 `
            --main-jar pingrpc-assembly-${{ env.VERSION }}.jar `
            --type exe `
            --app-version ${{ env.VERSION }} `
-           --name pingrpc `
+           --name PingRPC `
       - if: matrix.os == 'macos-15'
         uses: actions/upload-artifact@v4.6.2
         with:
