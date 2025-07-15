@@ -65,3 +65,7 @@ jobs:
         with:
           name: pingrpc.exe
           path: pingrpc-${{ env.VERSION }}.exe
+      - uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ env.VERSION }}
+          artifacts: "pingrpc-*.deb,pingrpc-*.exe,pingrpc-*.dmg"
