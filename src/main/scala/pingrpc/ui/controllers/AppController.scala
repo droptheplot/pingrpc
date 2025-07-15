@@ -108,6 +108,8 @@ class AppController(reflectionManager: ReflectionManager, sender: Sender, stateM
         methodsBox.getItems.clear()
 
         fillServices(services, service, servicesBox)
+      case Right(Nil) =>
+        new AlertView(s"${urlField.getText} returned no services", "No services found").showAndWait
       case Left(error: StatusException) if error.getStatus.getCode == Status.UNIMPLEMENTED.getCode =>
         new AlertView(s"${urlField.getText} does not support reflection", error.getMessage).showAndWait
       case Left(error: StatusException) =>

@@ -5,9 +5,10 @@ import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor}
 import com.google.protobuf.{Descriptors, Message}
 import javafx.beans.property._
 import javafx.scene.Node
-import pingrpc.form.values.{BooleanValue, DoubleValue, EnumValue, FloatValue, IntValue, LongValue, StringValue, UnknownValue}
+import pingrpc.form.values._
 
 import scala.jdk.CollectionConverters._
+import scala.reflect.ClassTag
 
 trait Form {
   def toNode: Node
@@ -82,10 +83,10 @@ object Form {
         UnknownValue(fieldDescriptor)
     }
 
-  private def getValue[T](message: Message, fieldDescriptor: FieldDescriptor): Option[T] =
+  private def getValue[T: ClassTag](message: Message, fieldDescriptor: FieldDescriptor): Option[T] =
     message.getField(fieldDescriptor) match {
       case values: java.util.List[T] if values.size > 0 => Option(values.getFirst)
-      case values: java.util.List[T] if values.isEmpty => None
+      case values: java.util.List[_] if values.isEmpty => None
       case value: T if value.isInstanceOf[T] => Option(value)
       case _ => None
     }
