@@ -1,10 +1,16 @@
 # PingRPC
 
-<img src="src/main/resources/icon.png" width="128"/>
-
 [![Test](https://github.com/droptheplot/pingrpc/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/droptheplot/pingrpc/actions/workflows/test.yml)
+![GitHub License](https://img.shields.io/github/license/droptheplot/pingrpc)
+[![GitHub Release](https://img.shields.io/github/v/release/droptheplot/pingrpc?include_prereleases)](https://github.com/droptheplot/pingrpc/releases)
 
-Cross platform gRPC client
+<p align="center">
+  <img src="src/main/resources/icon.png" width="128"\>
+</p>
+
+<p align="center">
+  Cross platform gRPC client
+</p>
 
 ![screenshot](screenshot.png)
 
