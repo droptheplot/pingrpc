@@ -14,6 +14,8 @@ case class UnknownValue(fieldDescriptor: FieldDescriptor) extends FormValue[Any]
 
   override def property: Property[Any] = ???
 
+  override def toValue: Option[Any] = None
+
   override def toNode: Node =
     new Label(s"${fieldDescriptor.getName} (not supported yet)")
 }
